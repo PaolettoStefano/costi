@@ -24,18 +24,12 @@
         
         .year-divider {
             background: rgba(255, 255, 255, 0.05);
-            cursor: pointer;
             border-left: 4px solid #3b82f6;
         }
         .month-divider {
             background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
             border-left: 4px solid #10b981;
-            cursor: pointer;
         }
-        /* Classi di stato */
-        .hidden-row { display: none !important; }
-        .chevron-rotate { transform: rotate(-90deg); }
-        .fas.fa-chevron-down { transition: transform 0.3s; }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -107,47 +101,6 @@
         }
     }
 
-    // NUOVA FUNZIONE TOGGLE GERARCHICA
-    function toggleYear(year) {
-        const icon = document.getElementById(`icon-year-${year}`);
-        const isClosing = !icon.classList.contains('chevron-rotate');
-        
-        // Ruota icona
-        icon.classList.toggle('chevron-rotate');
-        
-        // Trova tutti i mesi e le spese di quell'anno
-        const children = document.querySelectorAll(`.year-group-${year}`);
-        
-        children.forEach(child => {
-            if (isClosing) {
-                child.classList.add('hidden-row');
-            } else {
-                child.classList.remove('hidden-row');
-                // Se riapro l'anno, devo assicurarmi che i figli (spese) 
-                // seguano lo stato del loro mese specifico
-                if (child.classList.contains('month-divider')) {
-                    const monthId = child.getAttribute('data-month-id');
-                    const monthIcon = document.getElementById(`icon-month-${monthId}`);
-                    const expenseRows = document.querySelectorAll(`.month-group-${monthId}`);
-                    
-                    if (monthIcon.classList.contains('chevron-rotate')) {
-                        expenseRows.forEach(row => row.classList.add('hidden-row'));
-                    } else {
-                        expenseRows.forEach(row => row.classList.remove('hidden-row'));
-                    }
-                }
-            }
-        });
-    }
-
-    function toggleMonth(monthId) {
-        const icon = document.getElementById(`icon-month-${monthId}`);
-        icon.classList.toggle('chevron-rotate');
-        
-        const expenses = document.querySelectorAll(`.month-group-${monthId}`);
-        expenses.forEach(row => row.classList.toggle('hidden-row'));
-    }
-
     function renderTabella(costi) {
         const corpo = document.getElementById('tabella-corpo');
         if (costi.length === 0) {
@@ -159,6 +112,7 @@
         let grandTotal = 0;
         const report = {};
 
+        // Raggruppamento per Anno e Mese (basato su data_spesa)
         costi.forEach(item => {
             const d = new Date(item.data_spesa);
             const y = d.getFullYear();
@@ -175,41 +129,43 @@
             report[y].months[mKey].items.push(item);
         });
 
+        // Ordinamento anni decrescente
         const sortedYears = Object.keys(report).sort((a, b) => b - a);
 
         sortedYears.forEach(year => {
+            // Riga Divisore Anno
             html += `
-                <tr class="year-divider" onclick="toggleYear('${year}')">
+                <tr class="year-divider">
                     <td colspan="3" class="p-4 font-black text-blue-400 uppercase tracking-widest text-sm">
-                        <i id="icon-year-${year}" class="fas fa-chevron-down mr-2"></i> ANNO ${year}
+                        <i class="fas fa-calendar-alt mr-2"></i> ANNO ${year}
                     </td>
                     <td class="p-4 text-right font-black text-white">€ ${report[year].total.toFixed(2)}</td>
                     <td></td>
                 </tr>
             `;
 
+            // Mesi all'interno dell'anno
             Object.keys(report[year].months).forEach(monthLabel => {
-                const monthId = monthLabel.replace(/\s+/g, '-');
-                
                 html += `
-                    <tr class="month-divider year-group-${year}" data-month-id="${monthId}" onclick="toggleMonth('${monthId}')">
+                    <tr class="month-divider">
                         <td colspan="3" class="p-4 pl-10 text-xs font-bold uppercase tracking-widest text-emerald-400">
-                            <i id="icon-month-${monthId}" class="fas fa-chevron-down mr-2"></i> ${monthLabel}
+                            ${monthLabel}
                         </td>
                         <td class="p-4 text-right">
-                            <span class="text-[10px] text-slate-500 uppercase mr-2 font-bold">Mese:</span>
+                            <span class="text-[10px] text-slate-500 uppercase mr-2 font-bold">Totale Mese:</span>
                             <span class="text-sm font-black text-white">€ ${report[year].months[monthLabel].total.toFixed(2)}</span>
                         </td>
                         <td></td>
                     </tr>
                 `;
 
+                // Singole spese del mese
                 report[year].months[monthLabel].items.forEach(item => {
                     const dSpesa = new Date(item.data_spesa).toLocaleDateString('it-IT');
-                    const dCreazione = item.data_creazione ? new Date(item.data_creazione).toLocaleDateString('it-IT', {hour:'2-digit', minute:'2-digit'}) : '--';
+                    const dCreazione = item.data_creazione ? new Date(item.data_creazione).toLocaleDateString('it-IT', {hour:'2-digit', minute:'2-digit'}) : '--:--';
                     
                     html += `
-                        <tr class="table-row border-b border-white/5 year-group-${year} month-group-${monthId}">
+                        <tr class="table-row border-b border-white/5 transition-colors">
                             <td class="p-5 text-xs font-bold text-white">${dSpesa}</td>
                             <td class="p-5">
                                 <span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase text-emerald-500">
