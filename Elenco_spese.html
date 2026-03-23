@@ -33,7 +33,9 @@
         .month-divider {
             background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
             border-left: 4px solid #10b981;
+            cursor: pointer;
         }
+        .month-divider:hover { background: rgba(16, 185, 129, 0.15); }
 
         .hidden-section { display: none !important; }
         .chevron-icon { transition: transform 0.3s; }
@@ -104,16 +106,40 @@
 
     // Funzione per il collasso dell'anno
     function toggleYear(year) {
-        const rows = document.querySelectorAll(`.rows-of-${year}`);
-        const icon = document.getElementById(`icon-${year}`);
+        const icon = document.getElementById(`icon-year-${year}`);
+        const isClosing = !icon.classList.contains('chevron-rotate');
         
-        rows.forEach(row => {
+        icon.classList.toggle('chevron-rotate');
+        
+        // Trova tutti i figli dell'anno (mesi e spese)
+        const children = document.querySelectorAll(`.year-group-${year}`);
+        
+        children.forEach(child => {
+            if (isClosing) {
+                child.classList.add('hidden-section');
+            } else {
+                child.classList.remove('hidden-section');
+                // Se è una riga spesa, controlla se il suo mese di appartenenza è collassato
+                if (child.classList.contains('table-row')) {
+                    const monthId = child.getAttribute('data-parent-month');
+                    const monthIcon = document.getElementById(`icon-month-${monthId}`);
+                    if (monthIcon && monthIcon.classList.contains('chevron-rotate')) {
+                        child.classList.add('hidden-section');
+                    }
+                }
+            }
+        });
+    }
+
+    // Funzione per il collasso del mese
+    function toggleMonth(monthId) {
+        const icon = document.getElementById(`icon-month-${monthId}`);
+        icon.classList.toggle('chevron-rotate');
+        
+        const expenses = document.querySelectorAll(`.month-group-${monthId}`);
+        expenses.forEach(row => {
             row.classList.toggle('hidden-section');
         });
-        
-        if(icon) {
-            icon.classList.toggle('chevron-rotate');
-        }
     }
 
     function renderTabella(costi) {
@@ -144,23 +170,23 @@
         const sortedYears = Object.keys(report).sort((a, b) => b - a);
 
         sortedYears.forEach(year => {
-            // Riga Divisore Anno (Cliccabile)
             html += `
                 <tr class="year-divider" onclick="toggleYear('${year}')">
                     <td colspan="3" class="p-4 font-black text-blue-400 uppercase tracking-widest text-sm">
-                        <i id="icon-${year}" class="fas fa-chevron-down mr-2 chevron-icon"></i> ANNO ${year}
+                        <i id="icon-year-${year}" class="fas fa-chevron-down mr-2 chevron-icon"></i> ANNO ${year}
                     </td>
                     <td class="p-4 text-right font-black text-white">€ ${report[year].total.toFixed(2)}</td>
-                    <td class="p-4 text-right text-[9px] text-slate-500 uppercase font-bold">Clicca per espandere</td>
+                    <td class="p-4"></td>
                 </tr>
             `;
 
-            // Sezioni mesi e spese collegate all'anno tramite classe CSS
             Object.keys(report[year].months).forEach(monthLabel => {
+                const monthId = monthLabel.replace(/\s+/g, '-');
+                
                 html += `
-                    <tr class="month-divider rows-of-${year}">
+                    <tr class="month-divider year-group-${year}" onclick="toggleMonth('${monthId}')">
                         <td colspan="3" class="p-4 pl-10 text-xs font-bold uppercase tracking-widest text-emerald-400">
-                            ${monthLabel}
+                            <i id="icon-month-${monthId}" class="fas fa-chevron-down mr-2 chevron-icon"></i> ${monthLabel}
                         </td>
                         <td class="p-4 text-right">
                             <span class="text-[10px] text-slate-500 uppercase mr-2 font-bold">Mese:</span>
@@ -175,7 +201,7 @@
                     const dCreazione = item.data_creazione ? new Date(item.data_creazione).toLocaleDateString('it-IT', {hour:'2-digit', minute:'2-digit'}) : '--:--';
                     
                     html += `
-                        <tr class="table-row border-b border-white/5 transition-colors rows-of-${year}">
+                        <tr class="table-row border-b border-white/5 transition-colors year-group-${year} month-group-${monthId}" data-parent-month="${monthId}">
                             <td class="p-5 text-xs font-bold text-white">${dSpesa}</td>
                             <td class="p-5">
                                 <span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase text-emerald-500">
