@@ -67,6 +67,7 @@
             <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Importo (€)</label>
                 <input type="number" id="importo" step="0.01" placeholder="0.00" required class="w-full p-4 rounded-2xl text-xl font-black text-emerald-400">
+                <p class="text-[9px] text-slate-500 mt-2 ml-1 uppercase font-bold italic">* L'importo verrà salvato in negativo come spesa</p>
             </div>
 
             <div class="flex flex-col gap-3 pt-2">
@@ -101,7 +102,6 @@
 
     document.getElementById('data_spesa').valueAsDate = new Date();
 
-    // Caricamento tipologie dalla tabella tipologia_spesa
     async function loadTipologie() {
         try {
             const { data, error } = await supabaseClient
@@ -121,8 +121,7 @@
                 select.appendChild(opt);
             });
         } catch (err) {
-            console.error("Errore caricamento tipologie:", err.message);
-            document.getElementById('tipologia').innerHTML = '<option value="">Errore nel caricamento</option>';
+            console.error("Errore tipologie:", err.message);
         }
     }
 
@@ -135,20 +134,21 @@
         const tipoInput = document.getElementById('tipologia');
 
         if(!descInput.value || !impInput.value || !tipoInput.value) {
-            alert("Compila tutti i campi, inclusa la tipologia.");
+            alert("Compila tutti i campi!");
             return;
         }
 
-        const originalNew = btnNew.innerHTML;
-        const originalExit = btnExit.innerHTML;
         btnNew.classList.add('btn-loading');
         btnExit.classList.add('btn-loading');
+
+        // CALCOLO IMPORTO: Moltiplico per -1 per registrarlo come costo (negativo)
+        const importoNegativo = parseFloat(impInput.value) * -1;
 
         const nuovaSpesa = {
             data_spesa: dataInput.value,
             descrizione: descInput.value,
-            importo: parseFloat(impInput.value),
-            tipologia: tipoInput.value // Salvataggio della tipologia scelta
+            importo: importoNegativo, // Salvato come negativo
+            tipologia: tipoInput.value
         };
 
         try {
@@ -171,8 +171,6 @@
         } finally {
             btnNew.classList.remove('btn-loading');
             btnExit.classList.remove('btn-loading');
-            btnNew.innerHTML = originalNew;
-            btnExit.innerHTML = originalExit;
         }
     }
 
@@ -182,7 +180,6 @@
         setTimeout(() => toast.classList.add('hidden'), 2000);
     }
 
-    // Inizializza le tipologie all'avvio
     window.onload = loadTipologie;
 </script>
 
