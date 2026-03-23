@@ -6,7 +6,9 @@
     <title>Gestione Costi | Elenco</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
         body { 
@@ -20,12 +22,19 @@
             -webkit-backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        select {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: white !important;
+            outline: none;
+        }
+        select option { background: #0f172a; }
+        
         .table-row:hover { background: rgba(255, 255, 255, 0.05); }
         .year-divider {
             background: rgba(255, 255, 255, 0.05);
             border-left: 4px solid #3b82f6;
             cursor: pointer;
-            transition: background 0.2s;
         }
         .month-divider {
             background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
@@ -35,12 +44,8 @@
         .hidden-section { display: none !important; }
         .chevron-icon { transition: transform 0.3s; }
         .chevron-rotate { transform: rotate(-90deg); }
-        .btn-edit {
-            color: #3b82f6;
-            transition: all 0.2s;
-        }
+        .btn-edit { color: #3b82f6; transition: all 0.2s; }
         .btn-edit:hover { color: #60a5fa; transform: scale(1.2); }
-        
         .text-positive { color: #10b981 !important; }
         .text-negative { color: #ef4444 !important; }
     </style>
@@ -53,7 +58,10 @@
             <h1 class="text-3xl font-black uppercase tracking-tighter text-emerald-500">Gestione <span class="text-white">Costi</span></h1>
             <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Archivio Movimenti</p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex flex-wrap justify-center gap-3">
+            <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase transition-all flex items-center shadow-lg shadow-blue-900/20">
+                <i class="fas fa-file-excel mr-2"></i> Export Excel
+            </button>
             <a href="Nuova_spesa.html" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase transition-all flex items-center shadow-lg shadow-emerald-900/20">
                 <i class="fas fa-plus mr-2"></i> Aggiungi
             </a>
@@ -63,9 +71,27 @@
         </div>
     </div>
 
+    <div class="apple-glass p-6 rounded-[2rem] mb-6 flex flex-wrap gap-4 items-end">
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Filtra per Incarico</label>
+            <select id="filtro-incarico" onchange="applicaFiltri()" class="w-full p-3 rounded-xl text-xs font-bold">
+                <option value="">Tutti gli incarichi</option>
+            </select>
+        </div>
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Filtra per Tipologia</label>
+            <select id="filtro-tipologia" onchange="applicaFiltri()" class="w-full p-3 rounded-xl text-xs font-bold">
+                <option value="">Tutte le tipologie</option>
+            </select>
+        </div>
+        <button onclick="resetFiltri()" class="p-3 text-slate-400 hover:text-white transition-colors">
+            <i class="fas fa-undo-alt"></i>
+        </button>
+    </div>
+
     <div class="apple-glass rounded-[2rem] overflow-hidden mb-10 shadow-2xl">
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <table class="w-full text-left border-collapse" id="tabella-principale">
                 <thead>
                     <tr class="border-b border-white/10 bg-white/5">
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Data Spesa</th>
@@ -91,6 +117,8 @@
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
+    let datiOriginali = [];
+
     async function fetchCosti() {
         try {
             const { data, error } = await supabaseClient
@@ -99,6 +127,9 @@
                 .order('data_spesa', { ascending: false });
 
             if (error) throw error;
+            datiOriginali = data;
+            
+            popolaFiltri(data);
             renderTabella(data);
         } catch (err) {
             document.getElementById('tabella-corpo').innerHTML = `<tr><td colspan="6" class="p-10 text-center text-red-400">Errore caricamento</td></tr>`;
@@ -107,12 +138,48 @@
         }
     }
 
+    function popolaFiltri(data) {
+        const incarichi = [...new Set(data.map(item => item.incaricoa).filter(Boolean))].sort();
+        const tipologie = [...new Set(data.map(item => item.tipologia).filter(Boolean))].sort();
+
+        const selInc = document.getElementById('filtro-incarico');
+        const selTip = document.getElementById('filtro-tipologia');
+
+        incarichi.forEach(inc => {
+            const opt = new Option(inc, inc);
+            selInc.add(opt);
+        });
+
+        tipologie.forEach(tip => {
+            const opt = new Option(tip, tip);
+            selTip.add(opt);
+        });
+    }
+
+    function applicaFiltri() {
+        const valInc = document.getElementById('filtro-incarico').value;
+        const valTip = document.getElementById('filtro-tipologia').value;
+
+        const datiFiltrati = datiOriginali.filter(item => {
+            const matchInc = valInc === "" || item.incaricoa === valInc;
+            const matchTip = valTip === "" || item.tipologia === valTip;
+            return matchInc && matchTip;
+        });
+
+        renderTabella(datiFiltrati);
+    }
+
+    function resetFiltri() {
+        document.getElementById('filtro-incarico').value = "";
+        document.getElementById('filtro-tipologia').value = "";
+        renderTabella(datiOriginali);
+    }
+
     function toggleYear(year) {
         const icon = document.getElementById(`icon-year-${year}`);
         const isClosing = !icon.classList.contains('chevron-rotate');
         icon.classList.toggle('chevron-rotate');
-        const children = document.querySelectorAll(`.year-group-${year}`);
-        children.forEach(child => {
+        document.querySelectorAll(`.year-group-${year}`).forEach(child => {
             if (isClosing) child.classList.add('hidden-section');
             else {
                 child.classList.remove('hidden-section');
@@ -198,8 +265,39 @@
                 });
             });
         });
-        corpo.innerHTML = html;
+        corpo.innerHTML = html || '<tr><td colspan="6" class="p-10 text-center text-slate-500">Nessun dato trovato con i filtri selezionati</td></tr>';
     }
+
+    function exportToExcel() {
+        const valInc = document.getElementById('filtro-incarico').value || 'TUTTI';
+        const valTip = document.getElementById('filtro-tipologia').value || 'TUTTE';
+        
+        // Prepariamo i dati per l'export (solo quelli filtrati attualmente in tabella)
+        const datiDaEsportare = datiOriginali.filter(item => {
+            const matchInc = document.getElementById('filtro-incarico').value === "" || item.incaricoa === document.getElementById('filtro-incarico').value;
+            const matchTip = document.getElementById('filtro-tipologia').value === "" || item.tipologia === document.getElementById('filtro-tipologia').value;
+            return matchInc && matchTip;
+        }).map(item => ({
+            Data: item.data_spesa,
+            Incarico: item.incaricoa,
+            Tipologia: item.tipologia,
+            Descrizione: item.descrizione,
+            Importo: item.importo
+        }));
+
+        if(datiDaEsportare.length === 0) {
+            alert("Nessun dato da esportare!");
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(datiDaEsportare);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Costi");
+        
+        // Genera il file e scarica
+        XLSX.writeFile(workbook, `Export_Costi_${valInc}_${valTip}.xlsx`);
+    }
+
     window.onload = fetchCosti;
 </script>
 </body>
