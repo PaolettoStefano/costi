@@ -186,7 +186,7 @@
                     html += `
                         <tr class="table-row border-b border-white/5 year-group-${year} month-group-${mId} ${isCurrentYear ? '' : 'hidden-section'}" data-parent-month="${mId}">
                             <td class="p-5 text-xs font-bold text-white">${new Date(item.data_spesa).toLocaleDateString('it-IT')}</td>
-                            <td class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-wider">${item.incarico || '-'}</td>
+                            <td class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-wider">${item.incaricoa || '-'}</td>
                             <td class="p-5"><span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] text-emerald-500 font-black uppercase">${item.tipologia}</span></td>
                             <td class="p-5 text-sm text-slate-300">${item.descrizione || '-'}</td>
                             <td class="p-5 text-right font-black ${itemColor}">€ ${val.toFixed(2)}</td>
