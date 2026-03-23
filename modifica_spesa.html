@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifica Spesa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #020617; color: white; min-height: 100vh; }
+        .apple-glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        input, select { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
+    </style>
+</head>
+<body class="p-6 flex items-center justify-center">
+
+<div class="max-w-md w-full apple-glass p-8 rounded-[2.5rem]">
+    <div class="mb-8">
+        <h1 class="text-2xl font-black uppercase text-emerald-500">Modifica <span class="text-white">Record</span></h1>
+        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Aggiorna i dati della spesa</p>
+    </div>
+
+    <form id="form-modifica" class="space-y-6">
+        <input type="hidden" id="spesa-id">
+        <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Data Spesa</label>
+            <input type="date" id="data_spesa" required class="w-full p-4 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+        <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Tipologia</label>
+            <select id="tipologia" required class="w-full p-4 rounded-2xl outline-none">
+                <option value="Alimentari">Alimentari</option>
+                <option value="Trasporti">Trasporti</option>
+                <option value="Casa">Casa</option>
+                <option value="Svago">Svago</option>
+                <option value="Salute">Salute</option>
+                <option value="Altro">Altro</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Descrizione</label>
+            <input type="text" id="descrizione" class="w-full p-4 rounded-2xl outline-none">
+        </div>
+        <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Importo (€)</label>
+            <input type="number" step="0.01" id="importo" required class="w-full p-4 rounded-2xl outline-none">
+        </div>
+
+        <div class="flex gap-4 pt-4">
+            <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 p-4 rounded-2xl font-bold uppercase text-xs transition-all">Salva</button>
+            <a href="Elenco_spese.html" class="flex-1 bg-white/5 hover:bg-white/10 p-4 rounded-2xl font-bold uppercase text-xs text-center transition-all">Annulla</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    const SB_URL = 'https://wleaywzitgcenbhumhov.supabase.co'; 
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const recordId = urlParams.get('id');
+
+    async function caricaDati() {
+        if (!recordId) return;
+        const { data, error } = await supabaseClient.from('gestione_costi').select('*').eq('id', recordId).single();
+        if (data) {
+            document.getElementById('spesa-id').value = data.id;
+            document.getElementById('data_spesa').value = data.data_spesa;
+            document.getElementById('tipologia').value = data.tipologia;
+            document.getElementById('descrizione').value = data.descrizione;
+            document.getElementById('importo').value = data.importo;
+        }
+    }
+
+    document.getElementById('form-modifica').onsubmit = async (e) => {
+        e.preventDefault();
+        const updatedData = {
+            data_spesa: document.getElementById('data_spesa').value,
+            tipologia: document.getElementById('tipologia').value,
+            descrizione: document.getElementById('descrizione').value,
+            importo: parseFloat(document.getElementById('importo').value)
+        };
+        const { error } = await supabaseClient.from('gestione_costi').update(updatedData).eq('id', recordId);
+        if (error) alert("Errore: " + error.message);
+        else window.location.href = 'Elenco_spese.html';
+    };
+
+    window.onload = caricaDati;
+</script>
+</body>
+</html>
