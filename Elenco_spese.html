@@ -21,25 +21,25 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .table-row:hover { background: rgba(255, 255, 255, 0.05); }
-        
         .year-divider {
             background: rgba(255, 255, 255, 0.05);
             border-left: 4px solid #3b82f6;
             cursor: pointer;
             transition: background 0.2s;
         }
-        .year-divider:hover { background: rgba(255, 255, 255, 0.1); }
-        
         .month-divider {
             background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
             border-left: 4px solid #10b981;
             cursor: pointer;
         }
-        .month-divider:hover { background: rgba(16, 185, 129, 0.15); }
-
         .hidden-section { display: none !important; }
         .chevron-icon { transition: transform 0.3s; }
         .chevron-rotate { transform: rotate(-90deg); }
+        .btn-edit {
+            color: #3b82f6;
+            transition: all 0.2s;
+        }
+        .btn-edit:hover { color: #60a5fa; transform: scale(1.2); }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -52,7 +52,7 @@
         </div>
         <div class="flex gap-3">
             <a href="Nuova_spesa.html" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase transition-all flex items-center">
-                <i class="fas fa-plus mr-2"></i> Aggiungi Spesa
+                <i class="fas fa-plus mr-2"></i> Aggiungi
             </a>
             <a href="Riepilogo_statistiche.html" class="apple-glass px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-white/10 transition-all flex items-center">
                 <i class="fas fa-chart-line mr-2"></i> Dashboard
@@ -69,7 +69,7 @@
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Tipologia</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Descrizione</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Importo</th>
-                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Caricato</th>
+                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Azioni</th>
                     </tr>
                 </thead>
                 <tbody id="tabella-corpo"></tbody>
@@ -97,58 +97,38 @@
             if (error) throw error;
             renderTabella(data);
         } catch (err) {
-            console.error('Errore:', err.message);
-            document.getElementById('tabella-corpo').innerHTML = `<tr><td colspan="5" class="p-10 text-center text-red-400">Errore nel caricamento dati</td></tr>`;
+            document.getElementById('tabella-corpo').innerHTML = `<tr><td colspan="5" class="p-10 text-center text-red-400">Errore caricamento</td></tr>`;
         } finally {
             document.getElementById('loader').classList.add('hidden');
         }
     }
 
-    // Funzione per il collasso dell'anno
     function toggleYear(year) {
         const icon = document.getElementById(`icon-year-${year}`);
         const isClosing = !icon.classList.contains('chevron-rotate');
-        
         icon.classList.toggle('chevron-rotate');
-        
-        // Trova tutti i figli dell'anno (mesi e spese)
         const children = document.querySelectorAll(`.year-group-${year}`);
-        
         children.forEach(child => {
-            if (isClosing) {
-                child.classList.add('hidden-section');
-            } else {
+            if (isClosing) child.classList.add('hidden-section');
+            else {
                 child.classList.remove('hidden-section');
-                // Se è una riga spesa, controlla se il suo mese di appartenenza è collassato
                 if (child.classList.contains('table-row')) {
-                    const monthId = child.getAttribute('data-parent-month');
-                    const monthIcon = document.getElementById(`icon-month-${monthId}`);
-                    if (monthIcon && monthIcon.classList.contains('chevron-rotate')) {
-                        child.classList.add('hidden-section');
-                    }
+                    const mId = child.getAttribute('data-parent-month');
+                    if (document.getElementById(`icon-month-${mId}`).classList.contains('chevron-rotate')) child.classList.add('hidden-section');
                 }
             }
         });
     }
 
-    // Funzione per il collasso del mese
     function toggleMonth(monthId) {
         const icon = document.getElementById(`icon-month-${monthId}`);
         icon.classList.toggle('chevron-rotate');
-        
-        const expenses = document.querySelectorAll(`.month-group-${monthId}`);
-        expenses.forEach(row => {
-            row.classList.toggle('hidden-section');
-        });
+        document.querySelectorAll(`.month-group-${monthId}`).forEach(row => row.classList.toggle('hidden-section'));
     }
 
     function renderTabella(costi) {
         const corpo = document.getElementById('tabella-corpo');
-        if (costi.length === 0) {
-            corpo.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-slate-500 uppercase text-xs font-bold tracking-widest">Nessuna spesa registrata</td></tr>`;
-            return;
-        }
-
+        const currentYear = new Date().getFullYear().toString();
         let html = '';
         const report = {};
 
@@ -157,73 +137,55 @@
             const y = d.getFullYear();
             const m = d.toLocaleString('it-IT', { month: 'long' });
             const mKey = `${m} ${y}`;
-            const imp = parseFloat(item.importo) || 0;
-
             if (!report[y]) report[y] = { total: 0, months: {} };
             if (!report[y].months[mKey]) report[y].months[mKey] = { total: 0, items: [] };
-
-            report[y].total += imp;
-            report[y].months[mKey].total += imp;
+            report[y].total += parseFloat(item.importo) || 0;
+            report[y].months[mKey].total += parseFloat(item.importo) || 0;
             report[y].months[mKey].items.push(item);
         });
 
-        const sortedYears = Object.keys(report).sort((a, b) => b - a);
-
-        sortedYears.forEach(year => {
+        Object.keys(report).sort((a,b) => b-a).forEach(year => {
+            const isCurrentYear = year === currentYear;
             html += `
                 <tr class="year-divider" onclick="toggleYear('${year}')">
-                    <td colspan="3" class="p-4 font-black text-blue-400 uppercase tracking-widest text-sm">
-                        <i id="icon-year-${year}" class="fas fa-chevron-down mr-2 chevron-icon"></i> ANNO ${year}
+                    <td colspan="3" class="p-4 font-black text-blue-400 uppercase text-sm">
+                        <i id="icon-year-${year}" class="fas fa-chevron-down mr-2 chevron-icon ${isCurrentYear ? '' : 'chevron-rotate'}"></i> ANNO ${year}
                     </td>
                     <td class="p-4 text-right font-black text-white">€ ${report[year].total.toFixed(2)}</td>
-                    <td class="p-4"></td>
+                    <td></td>
                 </tr>
             `;
 
-            Object.keys(report[year].months).forEach(monthLabel => {
-                const monthId = monthLabel.replace(/\s+/g, '-');
-                
+            Object.keys(report[year].months).forEach(mLabel => {
+                const mId = mLabel.replace(/\s+/g, '-');
                 html += `
-                    <tr class="month-divider year-group-${year}" onclick="toggleMonth('${monthId}')">
-                        <td colspan="3" class="p-4 pl-10 text-xs font-bold uppercase tracking-widest text-emerald-400">
-                            <i id="icon-month-${monthId}" class="fas fa-chevron-down mr-2 chevron-icon"></i> ${monthLabel}
+                    <tr class="month-divider year-group-${year} ${isCurrentYear ? '' : 'hidden-section'}" onclick="toggleMonth('${mId}')">
+                        <td colspan="3" class="p-4 pl-10 text-xs font-bold text-emerald-400 uppercase">
+                            <i id="icon-month-${mId}" class="fas fa-chevron-down mr-2 chevron-icon"></i> ${mLabel}
                         </td>
-                        <td class="p-4 text-right">
-                            <span class="text-[10px] text-slate-500 uppercase mr-2 font-bold">Mese:</span>
-                            <span class="text-sm font-black text-white">€ ${report[year].months[monthLabel].total.toFixed(2)}</span>
-                        </td>
+                        <td class="p-4 text-right font-black text-white text-sm">€ ${report[year].months[mLabel].total.toFixed(2)}</td>
                         <td></td>
                     </tr>
                 `;
 
-                report[year].months[monthLabel].items.forEach(item => {
-                    const dSpesa = new Date(item.data_spesa).toLocaleDateString('it-IT');
-                    const dCreazione = item.data_creazione ? new Date(item.data_creazione).toLocaleDateString('it-IT', {hour:'2-digit', minute:'2-digit'}) : '--:--';
-                    
+                report[year].months[mLabel].items.forEach(item => {
                     html += `
-                        <tr class="table-row border-b border-white/5 transition-colors year-group-${year} month-group-${monthId}" data-parent-month="${monthId}">
-                            <td class="p-5 text-xs font-bold text-white">${dSpesa}</td>
-                            <td class="p-5">
-                                <span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase text-emerald-500">
-                                    ${item.tipologia || 'N/A'}
-                                </span>
-                            </td>
-                            <td class="p-5">
-                                <p class="text-sm text-slate-300 font-medium">${item.descrizione || '-'}</p>
-                            </td>
+                        <tr class="table-row border-b border-white/5 year-group-${year} month-group-${mId} ${isCurrentYear ? '' : 'hidden-section'}" data-parent-month="${mId}">
+                            <td class="p-5 text-xs font-bold text-white">${new Date(item.data_spesa).toLocaleDateString('it-IT')}</td>
+                            <td class="p-5"><span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] text-emerald-500 font-black uppercase">${item.tipologia}</span></td>
+                            <td class="p-5 text-sm text-slate-300">${item.descrizione || '-'}</td>
                             <td class="p-5 text-right font-black text-emerald-400">€ ${parseFloat(item.importo).toFixed(2)}</td>
-                            <td class="p-5 text-right text-[10px] text-slate-500 font-mono">${dCreazione}</td>
+                            <td class="p-5 text-center">
+                                <a href="modifica_spesa.html?id=${item.id}" class="btn-edit"><i class="fas fa-edit"></i></a>
+                            </td>
                         </tr>
                     `;
                 });
             });
         });
-
         corpo.innerHTML = html;
     }
-
     window.onload = fetchCosti;
 </script>
-
 </body>
 </html>
