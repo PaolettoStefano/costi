@@ -22,19 +22,19 @@
         }
         .table-row:hover { background: rgba(255, 255, 255, 0.05); }
         
-        /* Stili per i divisori */
         .year-divider {
             background: rgba(255, 255, 255, 0.05);
             cursor: pointer;
-            border-left: 4px solid #3b82f6; /* Blu per l'anno */
+            border-left: 4px solid #3b82f6;
         }
         .month-divider {
             background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
-            border-left: 4px solid #10b981; /* Verde per il mese */
+            border-left: 4px solid #10b981;
             cursor: pointer;
         }
-        .hidden-section { display: none; }
-        .chevron-rotate { transform: rotate(180deg); transition: transform 0.3s; }
+        /* Classe per nascondere le righe */
+        .hidden-section { display: none !important; }
+        .chevron-rotate { transform: rotate(-90deg); transition: transform 0.3s; }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -67,7 +67,7 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="border-b border-white/10 bg-white/5">
-                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
+                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Data Spesa</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Tipologia</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Descrizione</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Importo</th>
@@ -106,10 +106,22 @@
         }
     }
 
-    function toggleSection(id, iconId) {
-        const rows = document.querySelectorAll(`[data-parent="${id}"]`);
+    // Funzione di Toggle migliorata
+    function toggleSection(targetClass, iconId) {
+        const elements = document.getElementsByClassName(targetClass);
         const icon = document.getElementById(iconId);
-        rows.forEach(row => row.classList.toggle('hidden-section'));
+        
+        for (let el of elements) {
+            el.classList.toggle('hidden-section');
+            // Se stiamo chiudendo un anno, dobbiamo chiudere a cascata anche le righe dei mesi
+            if (targetClass.startsWith('year-group-') && el.classList.contains('month-divider')) {
+                const monthId = el.getAttribute('onclick').match(/'([^']+)'/)[1];
+                const subElements = document.getElementsByClassName(monthId);
+                for (let sub of subElements) {
+                    sub.classList.add('hidden-section');
+                }
+            }
+        }
         if(icon) icon.classList.toggle('chevron-rotate');
     }
 
@@ -121,11 +133,9 @@
         }
 
         let html = '';
-        let lastYear = '';
-        let lastMonth = '';
         let grandTotal = 0;
 
-        // Raggruppamento dati
+        // Raggruppamento per Anno e Mese (basato su data_spesa)
         const report = {};
         costi.forEach(item => {
             const d = new Date(item.data_spesa);
@@ -143,25 +153,33 @@
             report[y].months[mKey].items.push(item);
         });
 
-        // Generazione HTML
-        Object.keys(report).sort((a, b) => b - a).forEach(year => {
-            const yId = `year-${year}`;
+        // Ordinamento anni decrescente
+        const sortedYears = Object.keys(report).sort((a, b) => b - a);
+
+        sortedYears.forEach(year => {
+            const yearGroupId = `year-group-${year}`;
+            const yearIconId = `icon-year-${year}`;
+
             html += `
-                <tr class="year-divider" onclick="toggleSection('${yId}', 'icon-${yId}')">
+                <tr class="year-divider" onclick="toggleSection('${yearGroupId}', '${yearIconId}')">
                     <td colspan="3" class="p-4 font-black text-blue-400 uppercase tracking-widest text-sm">
-                        <i id="icon-${yId}" class="fas fa-chevron-down mr-2 transition-transform"></i> ANNO ${year}
+                        <i id="${yearIconId}" class="fas fa-chevron-down mr-2 transition-transform"></i> ANNO ${year}
                     </td>
                     <td class="p-4 text-right font-black text-white">€ ${report[year].total.toFixed(2)}</td>
                     <td></td>
                 </tr>
             `;
 
+            // Mesi all'interno dell'anno
             Object.keys(report[year].months).forEach(monthLabel => {
-                const mId = `month-${monthLabel.replace(/\s+/g, '-')}`;
+                const monthSafeId = monthLabel.replace(/\s+/g, '-');
+                const monthGroupId = `month-group-${monthSafeId}`;
+                const monthIconId = `icon-month-${monthSafeId}`;
+
                 html += `
-                    <tr class="month-divider" data-parent="${yId}" onclick="toggleSection('${mId}', 'icon-${mId}')">
+                    <tr class="month-divider ${yearGroupId}" onclick="toggleSection('${monthGroupId}', '${monthIconId}')">
                         <td colspan="3" class="p-4 pl-10 text-xs font-bold uppercase tracking-widest text-emerald-400">
-                            <i id="icon-${mId}" class="fas fa-chevron-down mr-2 transition-transform"></i> ${monthLabel}
+                            <i id="${monthIconId}" class="fas fa-chevron-down mr-2 transition-transform"></i> ${monthLabel}
                         </td>
                         <td class="p-4 text-right">
                             <span class="text-[10px] text-slate-500 uppercase mr-2 font-bold">Mese:</span>
@@ -171,12 +189,13 @@
                     </tr>
                 `;
 
+                // Singole spese
                 report[year].months[monthLabel].items.forEach(item => {
                     const dSpesa = new Date(item.data_spesa).toLocaleDateString('it-IT');
                     const dCreazione = new Date(item.data_creazione).toLocaleDateString('it-IT', {hour:'2-digit', minute:'2-digit'});
                     
                     html += `
-                        <tr class="table-row border-b border-white/5 transition-colors" data-parent="${yId}" data-parent="${mId}">
+                        <tr class="table-row border-b border-white/5 transition-colors ${yearGroupId} ${monthGroupId}">
                             <td class="p-5 text-xs font-bold text-white">${dSpesa}</td>
                             <td class="p-5">
                                 <span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase text-emerald-500">
