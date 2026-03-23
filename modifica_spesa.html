@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modifica Spesa</title>
+    <title>Modifica Spesa | Extreme Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,50 +13,53 @@
         .apple-glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         input, select { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
         option { background: #0f172a; color: white; }
-        .btn-loading { pointer-events: none; opacity: 0.6; }
+        .loading-shimmer { position: relative; overflow: hidden; }
+        .loading-shimmer::after { content: ""; position: absolute; top: 0; left: -150%; width: 150%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); animation: shimmer 2s infinite; }
+        @keyframes shimmer { 100% { left: 100%; } }
     </style>
 </head>
 <body class="p-6 flex items-center justify-center">
 
-<div class="max-w-md w-full apple-glass p-8 rounded-[2.5rem]">
+<div class="max-w-md w-full apple-glass p-8 rounded-[2.5rem] shadow-2xl">
     <div class="mb-8">
         <h1 class="text-2xl font-black uppercase text-emerald-500">Modifica <span class="text-white">Record</span></h1>
-        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Aggiorna i dati della spesa</p>
+        <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">Aggiornamento database istantaneo</p>
     </div>
 
-    <form id="form-modifica" class="space-y-6">
-        <input type="hidden" id="spesa-id">
+    <div id="form-container" class="space-y-6">
+        <input type="hidden" id="record-id-field">
         
         <div>
-            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Data Spesa</label>
-            <input type="date" id="data_spesa" required class="w-full p-4 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2 ml-1">Data</label>
+            <input type="date" id="data_spesa" class="w-full p-4 rounded-2xl outline-none focus:border-emerald-500 transition-all">
         </div>
 
         <div>
-            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Tipologia</label>
-            <select id="tipologia" required class="w-full p-4 rounded-2xl outline-none">
-                <option value="" disabled selected>Caricamento categorie...</option>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2 ml-1">Tipologia</label>
+            <select id="tipologia" class="w-full p-4 rounded-2xl outline-none cursor-pointer">
+                <option value="">Caricamento in corso...</option>
             </select>
         </div>
 
         <div>
-            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Descrizione</label>
-            <input type="text" id="descrizione" required class="w-full p-4 rounded-2xl outline-none">
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2 ml-1">Descrizione</label>
+            <input type="text" id="descrizione" placeholder="..." class="w-full p-4 rounded-2xl outline-none">
         </div>
 
         <div>
-            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Importo (€)</label>
-            <input type="number" step="0.01" id="importo" required class="w-full p-4 rounded-2xl outline-none text-emerald-400 font-bold">
-            <p class="text-[9px] text-slate-500 mt-2 uppercase font-bold">* Verrà salvato come valore negativo</p>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-2 ml-1">Importo (€)</label>
+            <input type="number" step="0.01" id="importo" placeholder="0.00" class="w-full p-4 rounded-2xl outline-none text-xl font-bold text-emerald-400">
         </div>
 
         <div class="flex gap-4 pt-4">
-            <button type="submit" id="btn-salva" class="flex-1 bg-emerald-600 hover:bg-emerald-500 p-4 rounded-2xl font-bold uppercase text-xs transition-all flex items-center justify-center">
-                <span>Salva Modifiche</span>
+            <button id="btn-update" class="flex-1 bg-emerald-600 hover:bg-emerald-500 p-4 rounded-2xl font-black uppercase text-xs transition-transform active:scale-95 shadow-lg shadow-emerald-900/20">
+                Salva Modifiche
             </button>
-            <a href="Elenco_spese.html" class="flex-1 bg-white/5 hover:bg-white/10 p-4 rounded-2xl font-bold uppercase text-xs text-center transition-all">Annulla</a>
+            <a href="Elenco_spese.html" class="flex-1 bg-white/5 hover:bg-white/10 p-4 rounded-2xl font-black uppercase text-xs text-center transition-all flex items-center justify-center">
+                Annulla
+            </a>
         </div>
-    </form>
+    </div>
 </div>
 
 <script>
@@ -64,103 +67,102 @@
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-    // Recupero ID dall'URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const recordId = urlParams.get('id');
+    const params = new URLSearchParams(window.location.search);
+    const targetId = params.get('id');
 
-    async function inizializzaPagina() {
-        if (!recordId) {
-            alert("ID record non trovato");
+    async function bootstrap() {
+        if (!targetId) {
+            alert("Nessun ID specificato nell'URL!");
             return;
         }
 
         try {
-            // 1. Carichiamo le tipologie
-            const { data: categorie, error: errCat } = await supabaseClient
-                .from('tipologia_spesa')
-                .select('descrizione')
-                .order('descrizione', { ascending: true });
-
-            if (errCat) throw errCat;
+            // 1. Fetch Tipologie
+            const { data: tipi, error: errTipi } = await supabaseClient.from('tipologia_spesa').select('descrizione').order('descrizione');
+            if (errTipi) throw errTipi;
 
             const select = document.getElementById('tipologia');
-            select.innerHTML = '<option value="" disabled>Seleziona tipologia</option>';
+            select.innerHTML = tipi.map(t => `<option value="${t.descrizione}">${t.descrizione}</option>`).join('');
 
-            categorie.forEach(tipo => {
-                const opt = document.createElement('option');
-                opt.value = tipo.descrizione;
-                opt.textContent = tipo.descrizione;
-                select.appendChild(opt);
-            });
-
-            // 2. Carichiamo il record
-            const { data: record, error: errRec } = await supabaseClient
-                .from('gestione_costi')
-                .select('*')
-                .eq('id', recordId)
-                .single();
-
+            // 2. Fetch Record
+            const { data: rec, error: errRec } = await supabaseClient.from('gestione_costi').select('*').eq('id', targetId).single();
             if (errRec) throw errRec;
 
-            if (record) {
-                document.getElementById('spesa-id').value = record.id;
-                document.getElementById('data_spesa').value = record.data_spesa;
-                document.getElementById('descrizione').value = record.descrizione || '';
-                // Mostriamo l'importo come positivo per facilitare la modifica
-                document.getElementById('importo').value = Math.abs(record.importo);
-                
-                // Impostiamo il valore del select
-                setTimeout(() => {
-                    document.getElementById('tipologia').value = record.tipologia;
-                }, 50);
-            }
+            // 3. Fill Fields
+            document.getElementById('record-id-field').value = rec.id;
+            document.getElementById('data_spesa').value = rec.data_spesa;
+            document.getElementById('descrizione').value = rec.descrizione || '';
+            document.getElementById('importo').value = Math.abs(rec.importo); // Mostra positivo
+            select.value = rec.tipologia;
 
-        } catch (err) {
-            console.error('Errore:', err.message);
-            alert("Errore nel caricamento dei dati.");
+        } catch (e) {
+            console.error("Errore Bootstrap:", e);
+            alert("Errore caricamento dati: " + e.message);
         }
     }
 
-    document.getElementById('form-modifica').onsubmit = async (e) => {
-        e.preventDefault();
+    // NUOVA METODOLOGIA: Event Listener diretto sul bottone invece del form.submit
+    document.getElementById('btn-update').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-update');
         
-        const btn = document.getElementById('btn-salva');
-        btn.classList.add('btn-loading');
-        btn.innerText = "Salvataggio...";
-
-        // Prendiamo l'ID dal campo hidden per sicurezza
-        const idDaModificare = document.getElementById('spesa-id').value;
-        const valoreImporto = parseFloat(document.getElementById('importo').value);
+        // Raccolta dati
+        const id = document.getElementById('record-id-field').value;
+        const data_spesa = document.getElementById('data_spesa').value;
+        const tipologia = document.getElementById('tipologia').value;
+        const descrizione = document.getElementById('descrizione').value;
+        const importoRaw = parseFloat(document.getElementById('importo').value);
         
-        // Assicuriamoci che l'importo sia salvato come negativo (spesa)
-        const importoNegativo = valoreImporto > 0 ? valoreImporto * -1 : valoreImporto;
+        // Validazione minima
+        if(!data_spesa || !tipologia || isNaN(importoRaw)) {
+            alert("Compila tutti i campi obbligatori!");
+            return;
+        }
 
-        const updatedData = {
-            data_spesa: document.getElementById('data_spesa').value,
-            tipologia: document.getElementById('tipologia').value,
-            descrizione: document.getElementById('descrizione').value,
-            importo: importoNegativo
-        };
+        // Stato loading
+        btn.disabled = true;
+        btn.innerText = "Sincronizzazione...";
+        btn.classList.add('loading-shimmer');
+
+        // Forza importo negativo (essendo una spesa)
+        const importoFinale = importoRaw > 0 ? importoRaw * -1 : importoRaw;
 
         try {
-            const { error } = await supabaseClient
+            console.log("Tentativo di aggiornamento per ID:", id);
+            
+            const { data, error, status } = await supabaseClient
                 .from('gestione_costi')
-                .update(updatedData)
-                .eq('id', idDaModificare);
+                .update({
+                    data_spesa,
+                    tipologia,
+                    descrizione,
+                    importo: importoFinale
+                })
+                .eq('id', id)
+                .select(); // Chiediamo il record indietro per confermare il successo
 
             if (error) throw error;
 
-            // Ritorno alla lista
-            window.location.href = 'Elenco_spese.html';
+            console.log("Risposta Supabase:", status, data);
             
-        } catch (err) {
-            alert("Errore durante il salvataggio: " + err.message);
-            btn.classList.remove('btn-loading');
-            btn.innerText = "Salva Modifiche";
-        }
-    };
+            if (status === 200 || status === 204) {
+                // Successo atomico
+                window.location.href = 'Elenco_spese.html';
+            } else {
+                throw new Error("Aggiornamento non confermato dal server.");
+            }
 
-    window.onload = inizializzaPagina;
+        } catch (err) {
+            console.error("ERRORE CRITICO SALVATAGGIO:", err);
+            alert("Non è stato possibile salvare: " + (err.message || "Errore sconosciuto"));
+            
+            btn.disabled = false;
+            btn.innerText = "Riprova Salva";
+            btn.classList.remove('loading-shimmer');
+        }
+    });
+
+    // Avvio
+    window.addEventListener('DOMContentLoaded', bootstrap);
 </script>
 </body>
 </html>
