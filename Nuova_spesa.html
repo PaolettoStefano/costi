@@ -18,21 +18,14 @@
         .apple-glass {
             background: rgba(255, 255, 255, 0.02);
             backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
         input, textarea, select {
             background: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             color: white !important;
-            transition: all 0.3s;
         }
-        input:focus, select:focus, textarea:focus { 
-            border-color: #10b981 !important; 
-            outline: none; 
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); 
-        }
+        input:focus, select:focus { border-color: #10b981 !important; outline: none; }
         option { background: #0f172a; color: white; }
         .btn-loading { pointer-events: none; opacity: 0.6; }
     </style>
@@ -41,60 +34,48 @@
 
 <div class="w-full max-w-md">
     <div class="text-center mb-8">
-        <h1 class="text-3xl font-black uppercase tracking-tighter text-emerald-500">Nuova <span class="text-white">Registrazione</span></h1>
-        <p class="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Movimento Contabile</p>
+        <h1 class="text-3xl font-black uppercase tracking-tighter text-emerald-500">Nuovo <span class="text-white">Movimento</span></h1>
     </div>
 
     <div class="apple-glass p-8 rounded-[2.5rem]">
         <form id="form-spesa" class="space-y-5">
             <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Data Operazione</label>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Data</label>
                 <input type="date" id="data_spesa" required class="w-full p-4 rounded-2xl text-sm">
             </div>
 
             <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Tipologia</label>
-                <select id="tipologia" required class="w-full p-4 rounded-2xl text-sm appearance-none cursor-pointer">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tipologia</label>
+                <select id="tipologia" onchange="aggiornaColoreImporto()" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
                     <option value="" disabled selected>Caricamento categorie...</option>
                 </select>
             </div>
 
             <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Descrizione</label>
-                <textarea id="descrizione" rows="2" placeholder="Dettagli movimento..." required class="w-full p-4 rounded-2xl text-sm resize-none"></textarea>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Descrizione</label>
+                <textarea id="descrizione" rows="2" placeholder="Dettagli..." required class="w-full p-4 rounded-2xl text-sm resize-none"></textarea>
             </div>
 
             <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Importo (€)</label>
-                <input type="number" id="importo" step="0.01" placeholder="0.00" required class="w-full p-4 rounded-2xl text-xl font-black text-emerald-400">
-                <p class="text-[9px] text-slate-500 mt-2 ml-1 uppercase font-bold italic text-center">
-                    * Il segno verrà applicato automaticamente in base alla tipologia
-                </p>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Importo (€)</label>
+                <input type="number" id="importo" step="0.01" placeholder="0.00" required class="w-full p-4 rounded-2xl text-xl font-black transition-colors duration-300 text-white">
+                <p id="info-segno" class="text-[9px] text-slate-500 mt-2 ml-1 uppercase font-bold italic">Seleziona una categoria</p>
             </div>
 
             <div class="flex flex-col gap-3 pt-2">
-                <button type="button" onclick="saveData(true)" id="btn-save-new" class="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-4 rounded-2xl uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 border border-white/10">
-                    <i class="fas fa-plus-circle"></i> Salva e Aggiungi Altra
+                <button type="button" onclick="saveData(true)" id="btn-save-new" class="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-4 rounded-2xl uppercase tracking-widest text-[10px] border border-white/10">
+                    Salva e Aggiungi Altra
                 </button>
-                
-                <button type="button" onclick="saveData(false)" id="btn-save-exit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-900/20">
-                    <i class="fas fa-check"></i> Salva e Vai alla Lista
+                <button type="button" onclick="saveData(false)" id="btn-save-exit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-emerald-900/20">
+                    Salva e Vai alla Lista
                 </button>
             </div>
         </form>
-
-        <div class="mt-8 pt-6 border-t border-white/5 flex justify-center">
-            <a href="Elenco_spese.html" class="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
-                <i class="fas fa-times mr-1"></i> Annulla e torna indietro
-            </a>
-        </div>
     </div>
 </div>
 
 <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 apple-glass px-8 py-4 rounded-full border-emerald-500/50 hidden z-50">
-    <p class="text-xs font-bold text-emerald-400 flex items-center uppercase tracking-widest">
-        <i class="fas fa-check-circle mr-2 text-lg"></i> Operazione Registrata!
-    </p>
+    <p class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Registrato!</p>
 </div>
 
 <script>
@@ -102,9 +83,7 @@
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-    // Mappa per salvare internamente il segno di ogni tipologia
     let mappaSegni = {};
-
     document.getElementById('data_spesa').valueAsDate = new Date();
 
     async function loadTipologie() {
@@ -120,63 +99,79 @@
             select.innerHTML = '<option value="" disabled selected>Seleziona categoria</option>';
             
             data.forEach(tipo => {
-                // Salviamo il segno (1 o -1) associato alla descrizione
-                mappaSegni[tipo.descrizione] = tipo.segno;
+                // Forziamo il segno a numero per evitare il NaN
+                mappaSegni[tipo.descrizione] = Number(tipo.segno);
                 
                 const opt = document.createElement('option');
                 opt.value = tipo.descrizione;
                 opt.textContent = tipo.descrizione;
                 select.appendChild(opt);
             });
-        } catch (err) {
-            console.error("Errore caricamento tipologie:", err.message);
+        } catch (err) { console.error(err); }
+    }
+
+    function aggiornaColoreImporto() {
+        const tipo = document.getElementById('tipologia').value;
+        const inputImp = document.getElementById('importo');
+        const info = document.getElementById('info-segno');
+        const segno = mappaSegni[tipo];
+
+        if (segno === 1) {
+            inputImp.classList.remove('text-red-400', 'text-white');
+            inputImp.classList.add('text-emerald-400');
+            info.innerText = "Verrà salvato come ENTRATA (+)";
+            info.classList.replace('text-slate-500', 'text-emerald-500');
+        } else {
+            inputImp.classList.remove('text-emerald-400', 'text-white');
+            inputImp.classList.add('text-red-400');
+            info.innerText = "Verrà salvato come USCITA (-)";
+            info.classList.replace('text-emerald-500', 'text-slate-500');
         }
     }
 
     async function saveData(keepOpening) {
         const btnNew = document.getElementById('btn-save-new');
         const btnExit = document.getElementById('btn-save-exit');
-        const descInput = document.getElementById('descrizione');
-        const impInput = document.getElementById('importo');
-        const dataInput = document.getElementById('data_spesa');
-        const tipoInput = document.getElementById('tipologia');
+        const fields = {
+            desc: document.getElementById('descrizione'),
+            imp: document.getElementById('importo'),
+            data: document.getElementById('data_spesa'),
+            tipo: document.getElementById('tipologia')
+        };
 
-        if(!descInput.value || !impInput.value || !tipoInput.value) {
-            alert("Compila tutti i campi!");
-            return;
+        if(!fields.desc.value || !fields.imp.value || !fields.tipo.value) {
+            alert("Mancano dei dati!"); return;
         }
 
         btnNew.classList.add('btn-loading');
         btnExit.classList.add('btn-loading');
 
-        // LOGICA SEGNO: Recupero il segno (+1 o -1) dalla mappa in base alla tipologia scelta
-        const segno = mappaSegni[tipoInput.value] || -1; // Default a -1 se non trovato
-        const importoCalcolato = parseFloat(impInput.value) * segno;
-
-        const nuovaRegistrazione = {
-            data_spesa: dataInput.value,
-            descrizione: descInput.value,
-            importo: importoCalcolato,
-            tipologia: tipoInput.value
-        };
+        // CALCOLO SICURO: Convertiamo tutto in numeri per evitare NaN
+        const valoreInserito = parseFloat(fields.imp.value);
+        const moltiplicatore = mappaSegni[fields.tipo.value] || -1;
+        const importoFinale = valoreInserito * moltiplicatore;
 
         try {
-            const { error } = await supabaseClient.from('gestione_costi').insert([nuovaRegistrazione]);
+            const { error } = await supabaseClient.from('gestione_costi').insert([{
+                data_spesa: fields.data.value,
+                descrizione: fields.desc.value,
+                importo: importoFinale,
+                tipologia: fields.tipo.value
+            }]);
+
             if (error) throw error;
 
             showToast();
-
             if (keepOpening) {
-                descInput.value = '';
-                impInput.value = '';
-                tipoInput.selectedIndex = 0;
-                descInput.focus();
+                fields.desc.value = ''; fields.imp.value = ''; fields.tipo.selectedIndex = 0;
+                fields.imp.classList.replace('text-emerald-400', 'text-white');
+                fields.imp.classList.replace('text-red-400', 'text-white');
+                document.getElementById('info-segno').innerText = "Seleziona una categoria";
             } else {
                 setTimeout(() => window.location.href = 'Elenco_spese.html', 800);
             }
-
         } catch (err) {
-            alert("Errore durante il salvataggio: " + err.message);
+            alert("Errore: " + err.message);
         } finally {
             btnNew.classList.remove('btn-loading');
             btnExit.classList.remove('btn-loading');
@@ -184,13 +179,12 @@
     }
 
     function showToast() {
-        const toast = document.getElementById('toast');
-        toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 2000);
+        const t = document.getElementById('toast');
+        t.classList.remove('hidden');
+        setTimeout(() => t.classList.add('hidden'), 2000);
     }
 
     window.onload = loadTipologie;
 </script>
-
 </body>
 </html>
