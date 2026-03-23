@@ -94,6 +94,7 @@
     document.getElementById('data_spesa').valueAsDate = new Date();
 
     async function loadInitialData() {
+        // Carichiamo entrambe le tabelle all'avvio
         await Promise.all([loadTipologie(), loadIncarichi()]);
     }
 
@@ -120,24 +121,29 @@
     }
 
     async function loadIncarichi() {
+        const select = document.getElementById('incaricoa');
         try {
             const { data, error } = await supabaseClient
-                .from('_carico')
-                .select('incaricoa') // Corretto: legge campo incaricoa
+                .from('in_carico') // NOME TABELLA CORRETTO: in_carico
+                .select('incaricoa') 
                 .order('incaricoa', { ascending: true });
 
             if (error) throw error;
 
-            const select = document.getElementById('incaricoa');
             select.innerHTML = '<option value="" disabled selected>Seleziona incarico</option>';
             
             data.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.incaricoa;
-                opt.textContent = item.incaricoa;
-                select.appendChild(opt);
+                if (item.incaricoa) {
+                    const opt = document.createElement('option');
+                    opt.value = item.incaricoa;
+                    opt.textContent = item.incaricoa;
+                    select.appendChild(opt);
+                }
             });
-        } catch (err) { console.error("Errore incarichi:", err); }
+        } catch (err) { 
+            console.error("Errore incarichi:", err); 
+            select.innerHTML = '<option value="" disabled selected>Errore caricamento</option>';
+        }
     }
 
     function aggiornaColoreImporto() {
@@ -167,7 +173,7 @@
             imp: document.getElementById('importo'),
             data: document.getElementById('data_spesa'),
             tipo: document.getElementById('tipologia'),
-            inc: document.getElementById('incaricoa') // Corretto riferimento ID
+            inc: document.getElementById('incaricoa') 
         };
 
         if(!fields.desc.value || !fields.imp.value || !fields.tipo.value || !fields.inc.value) {
@@ -187,7 +193,7 @@
                 descrizione: fields.desc.value,
                 importo: importoFinale,
                 tipologia: fields.tipo.value,
-                incaricoa: fields.inc.value // Corretto: salva nel campo incaricoa
+                incaricoa: fields.inc.value // Salva nella colonna incaricoa
             }]);
 
             if (error) throw error;
@@ -203,7 +209,7 @@
                 setTimeout(() => window.location.href = 'Elenco_spese.html', 800);
             }
         } catch (err) {
-            alert("Errore: " + err.message);
+            alert("Errore salvataggio: " + err.message);
         } finally {
             btnNew.classList.remove('btn-loading');
             btnExit.classList.remove('btn-loading');
