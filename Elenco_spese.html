@@ -21,10 +21,20 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .table-row:hover { background: rgba(255, 255, 255, 0.05); }
+        
+        /* Stili per i divisori */
+        .year-divider {
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            border-left: 4px solid #3b82f6; /* Blu per l'anno */
+        }
         .month-divider {
             background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
-            border-left: 4px solid #10b981;
+            border-left: 4px solid #10b981; /* Verde per il mese */
+            cursor: pointer;
         }
+        .hidden-section { display: none; }
+        .chevron-rotate { transform: rotate(180deg); transition: transform 0.3s; }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -57,14 +67,14 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="border-b border-white/10 bg-white/5">
-                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Data Spesa</th>
+                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
+                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Tipologia</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Descrizione</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Importo</th>
-                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Inserito il</th>
+                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Caricato</th>
                     </tr>
                 </thead>
-                <tbody id="tabella-corpo">
-                    </tbody>
+                <tbody id="tabella-corpo"></tbody>
             </table>
         </div>
     </div>
@@ -90,87 +100,101 @@
             renderTabella(data);
         } catch (err) {
             console.error('Errore:', err.message);
-            document.getElementById('tabella-corpo').innerHTML = `<tr><td colspan="4" class="p-10 text-center text-red-400">Errore nel caricamento dati</td></tr>`;
+            document.getElementById('tabella-corpo').innerHTML = `<tr><td colspan="5" class="p-10 text-center text-red-400">Errore nel caricamento dati</td></tr>`;
         } finally {
             document.getElementById('loader').classList.add('hidden');
         }
     }
 
+    function toggleSection(id, iconId) {
+        const rows = document.querySelectorAll(`[data-parent="${id}"]`);
+        const icon = document.getElementById(iconId);
+        rows.forEach(row => row.classList.toggle('hidden-section'));
+        if(icon) icon.classList.toggle('chevron-rotate');
+    }
+
     function renderTabella(costi) {
         const corpo = document.getElementById('tabella-corpo');
         if (costi.length === 0) {
-            corpo.innerHTML = `<tr><td colspan="4" class="p-10 text-center text-slate-500 uppercase text-xs font-bold tracking-widest">Nessuna spesa registrata</td></tr>`;
+            corpo.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-slate-500 uppercase text-xs font-bold tracking-widest">Nessuna spesa registrata</td></tr>`;
             return;
         }
 
-        let htmlOrchestrator = '';
-        let currentMonthYear = '';
-        let monthTotal = 0;
+        let html = '';
+        let lastYear = '';
+        let lastMonth = '';
         let grandTotal = 0;
 
-        // Calcolo totali per mese e inserimento divisori
-        const formattedRows = [];
+        // Raggruppamento dati
+        const report = {};
+        costi.forEach(item => {
+            const d = new Date(item.data_spesa);
+            const y = d.getFullYear();
+            const m = d.toLocaleString('it-IT', { month: 'long' });
+            const mKey = `${m} ${y}`;
+            const imp = parseFloat(item.importo) || 0;
+            grandTotal += imp;
 
-        costi.forEach((item, index) => {
-            const dateObj = new Date(item.data_spesa);
-            const monthName = dateObj.toLocaleString('it-IT', { month: 'long' });
-            const year = dateObj.getFullYear();
-            const monthYearLabel = `${monthName} ${year}`;
-            const importo = parseFloat(item.importo) || 0;
+            if (!report[y]) report[y] = { total: 0, months: {} };
+            if (!report[y].months[mKey]) report[y].months[mKey] = { total: 0, items: [] };
 
-            grandTotal += importo;
+            report[y].total += imp;
+            report[y].months[mKey].total += imp;
+            report[y].months[mKey].items.push(item);
+        });
 
-            // Se cambiamo mese, inseriamo prima il riepilogo del mese precedente (se esiste)
-            if (currentMonthYear !== "" && currentMonthYear !== monthYearLabel) {
-                // Inseriamo il totale del mese appena concluso nella riga di separazione successiva
-            }
+        // Generazione HTML
+        Object.keys(report).sort((a, b) => b - a).forEach(year => {
+            const yId = `year-${year}`;
+            html += `
+                <tr class="year-divider" onclick="toggleSection('${yId}', 'icon-${yId}')">
+                    <td colspan="3" class="p-4 font-black text-blue-400 uppercase tracking-widest text-sm">
+                        <i id="icon-${yId}" class="fas fa-chevron-down mr-2 transition-transform"></i> ANNO ${year}
+                    </td>
+                    <td class="p-4 text-right font-black text-white">€ ${report[year].total.toFixed(2)}</td>
+                    <td></td>
+                </tr>
+            `;
 
-            // Se è un nuovo mese, creiamo la riga divisoria
-            if (currentMonthYear !== monthYearLabel) {
-                currentMonthYear = monthYearLabel;
-                
-                // Calcoliamo il totale solo per questo specifico mese
-                const totalForThisMonth = costi
-                    .filter(c => {
-                        const d = new Date(c.data_spesa);
-                        return `${d.toLocaleString('it-IT', { month: 'long' })} ${d.getFullYear()}` === monthYearLabel;
-                    })
-                    .reduce((acc, curr) => acc + (parseFloat(curr.importo) || 0), 0);
-
-                htmlOrchestrator += `
-                    <tr class="month-divider">
-                        <td colspan="2" class="p-4 text-xs font-black uppercase tracking-[0.2em] text-emerald-400">
-                            <i class="far fa-calendar-alt mr-2"></i> ${monthYearLabel}
+            Object.keys(report[year].months).forEach(monthLabel => {
+                const mId = `month-${monthLabel.replace(/\s+/g, '-')}`;
+                html += `
+                    <tr class="month-divider" data-parent="${yId}" onclick="toggleSection('${mId}', 'icon-${mId}')">
+                        <td colspan="3" class="p-4 pl-10 text-xs font-bold uppercase tracking-widest text-emerald-400">
+                            <i id="icon-${mId}" class="fas fa-chevron-down mr-2 transition-transform"></i> ${monthLabel}
                         </td>
                         <td class="p-4 text-right">
-                            <span class="text-[10px] text-slate-500 uppercase mr-2 font-bold">Totale Mese:</span>
-                            <span class="text-sm font-black text-white">€ ${totalForThisMonth.toFixed(2)}</span>
+                            <span class="text-[10px] text-slate-500 uppercase mr-2 font-bold">Mese:</span>
+                            <span class="text-sm font-black text-white">€ ${report[year].months[monthLabel].total.toFixed(2)}</span>
                         </td>
                         <td></td>
                     </tr>
                 `;
-            }
 
-            const dSpesa = dateObj.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const dCreazione = new Date(item.data_creazione).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-
-            htmlOrchestrator += `
-                <tr class="table-row border-b border-white/5 transition-colors">
-                    <td class="p-5 text-xs font-bold text-white">${dSpesa}</td>
-                    <td class="p-5">
-                        <p class="text-sm text-slate-300 font-medium">${item.descrizione || '-'}</p>
-                    </td>
-                    <td class="p-5 text-right">
-                        <span class="text-emerald-400 font-black">€ ${importo.toFixed(2)}</span>
-                    </td>
-                    <td class="p-5 text-right text-[10px] text-slate-500 font-mono">${dCreazione}</td>
-                </tr>
-            `;
+                report[year].months[monthLabel].items.forEach(item => {
+                    const dSpesa = new Date(item.data_spesa).toLocaleDateString('it-IT');
+                    const dCreazione = new Date(item.data_creazione).toLocaleDateString('it-IT', {hour:'2-digit', minute:'2-digit'});
+                    
+                    html += `
+                        <tr class="table-row border-b border-white/5 transition-colors" data-parent="${yId}" data-parent="${mId}">
+                            <td class="p-5 text-xs font-bold text-white">${dSpesa}</td>
+                            <td class="p-5">
+                                <span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase text-emerald-500">
+                                    ${item.tipologia || 'N/A'}
+                                </span>
+                            </td>
+                            <td class="p-5">
+                                <p class="text-sm text-slate-300 font-medium">${item.descrizione || '-'}</p>
+                            </td>
+                            <td class="p-5 text-right font-black text-emerald-400">€ ${parseFloat(item.importo).toFixed(2)}</td>
+                            <td class="p-5 text-right text-[10px] text-slate-500 font-mono">${dCreazione}</td>
+                        </tr>
+                    `;
+                });
+            });
         });
 
-        corpo.innerHTML = htmlOrchestrator;
-        
-        // Mostra il totale generale in alto
+        corpo.innerHTML = html;
         document.getElementById('quick-stats').classList.remove('hidden');
         document.getElementById('totale-generale').innerText = `€ ${grandTotal.toFixed(2)}`;
     }
