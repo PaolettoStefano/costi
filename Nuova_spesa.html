@@ -45,6 +45,13 @@
             </div>
 
             <div>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Incarico</label>
+                <select id="incarico" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
+                    <option value="" disabled selected>Caricamento incarichi...</option>
+                </select>
+            </div>
+
+            <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tipologia</label>
                 <select id="tipologia" onchange="aggiornaColoreImporto()" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
                     <option value="" disabled selected>Caricamento categorie...</option>
@@ -86,6 +93,10 @@
     let mappaSegni = {};
     document.getElementById('data_spesa').valueAsDate = new Date();
 
+    async function loadInitialData() {
+        await Promise.all([loadTipologie(), loadIncarichi()]);
+    }
+
     async function loadTipologie() {
         try {
             const { data, error } = await supabaseClient
@@ -99,15 +110,34 @@
             select.innerHTML = '<option value="" disabled selected>Seleziona categoria</option>';
             
             data.forEach(tipo => {
-                // Forziamo il segno a numero per evitare il NaN
                 mappaSegni[tipo.descrizione] = Number(tipo.segno);
-                
                 const opt = document.createElement('option');
                 opt.value = tipo.descrizione;
                 opt.textContent = tipo.descrizione;
                 select.appendChild(opt);
             });
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error("Errore tipologie:", err); }
+    }
+
+    async function loadIncarichi() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('_carico')
+                .select('incarico')
+                .order('incarico', { ascending: true });
+
+            if (error) throw error;
+
+            const select = document.getElementById('incarico');
+            select.innerHTML = '<option value="" disabled selected>Seleziona incarico</option>';
+            
+            data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.incarico;
+                opt.textContent = item.incarico;
+                select.appendChild(opt);
+            });
+        } catch (err) { console.error("Errore incarichi:", err); }
     }
 
     function aggiornaColoreImporto() {
@@ -136,17 +166,17 @@
             desc: document.getElementById('descrizione'),
             imp: document.getElementById('importo'),
             data: document.getElementById('data_spesa'),
-            tipo: document.getElementById('tipologia')
+            tipo: document.getElementById('tipologia'),
+            inc: document.getElementById('incarico')
         };
 
-        if(!fields.desc.value || !fields.imp.value || !fields.tipo.value) {
-            alert("Mancano dei dati!"); return;
+        if(!fields.desc.value || !fields.imp.value || !fields.tipo.value || !fields.inc.value) {
+            alert("Compila tutti i campi, incluso l'incarico!"); return;
         }
 
         btnNew.classList.add('btn-loading');
         btnExit.classList.add('btn-loading');
 
-        // CALCOLO SICURO: Convertiamo tutto in numeri per evitare NaN
         const valoreInserito = parseFloat(fields.imp.value);
         const moltiplicatore = mappaSegni[fields.tipo.value] || -1;
         const importoFinale = valoreInserito * moltiplicatore;
@@ -156,16 +186,18 @@
                 data_spesa: fields.data.value,
                 descrizione: fields.desc.value,
                 importo: importoFinale,
-                tipologia: fields.tipo.value
+                tipologia: fields.tipo.value,
+                incarico: fields.inc.value
             }]);
 
             if (error) throw error;
 
             showToast();
             if (keepOpening) {
-                fields.desc.value = ''; fields.imp.value = ''; fields.tipo.selectedIndex = 0;
-                fields.imp.classList.replace('text-emerald-400', 'text-white');
-                fields.imp.classList.replace('text-red-400', 'text-white');
+                fields.desc.value = ''; fields.imp.value = ''; 
+                fields.tipo.selectedIndex = 0; fields.inc.selectedIndex = 0;
+                fields.imp.classList.remove('text-emerald-400', 'text-red-400');
+                fields.imp.classList.add('text-white');
                 document.getElementById('info-segno').innerText = "Seleziona una categoria";
             } else {
                 setTimeout(() => window.location.href = 'Elenco_spese.html', 800);
@@ -184,7 +216,7 @@
         setTimeout(() => t.classList.add('hidden'), 2000);
     }
 
-    window.onload = loadTipologie;
+    window.onload = loadInitialData;
 </script>
 </body>
 </html>
