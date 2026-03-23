@@ -22,13 +22,18 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-        input, textarea {
+        input, textarea, select {
             background: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             color: white !important;
             transition: all 0.3s;
         }
-        input:focus { border-color: #10b981 !important; outline: none; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+        input:focus, select:focus, textarea:focus { 
+            border-color: #10b981 !important; 
+            outline: none; 
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); 
+        }
+        option { background: #0f172a; color: white; }
         .btn-loading { pointer-events: none; opacity: 0.6; }
     </style>
 </head>
@@ -41,10 +46,17 @@
     </div>
 
     <div class="apple-glass p-8 rounded-[2.5rem]">
-        <form id="form-spesa" class="space-y-6">
+        <form id="form-spesa" class="space-y-5">
             <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Data Operazione</label>
                 <input type="date" id="data_spesa" required class="w-full p-4 rounded-2xl text-sm">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Tipologia Spesa</label>
+                <select id="tipologia" required class="w-full p-4 rounded-2xl text-sm appearance-none cursor-pointer">
+                    <option value="" disabled selected>Caricamento categorie...</option>
+                </select>
             </div>
 
             <div>
@@ -85,9 +97,34 @@
 <script>
     const SB_URL = 'https://wleaywzitgcenbhumhov.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
- const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
     document.getElementById('data_spesa').valueAsDate = new Date();
+
+    // Caricamento tipologie dalla tabella tipologia_spesa
+    async function loadTipologie() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('tipologia_spesa')
+                .select('descrizione')
+                .order('descrizione', { ascending: true });
+
+            if (error) throw error;
+
+            const select = document.getElementById('tipologia');
+            select.innerHTML = '<option value="" disabled selected>Seleziona categoria</option>';
+            
+            data.forEach(tipo => {
+                const opt = document.createElement('option');
+                opt.value = tipo.descrizione;
+                opt.textContent = tipo.descrizione;
+                select.appendChild(opt);
+            });
+        } catch (err) {
+            console.error("Errore caricamento tipologie:", err.message);
+            document.getElementById('tipologia').innerHTML = '<option value="">Errore nel caricamento</option>';
+        }
+    }
 
     async function saveData(keepOpening) {
         const btnNew = document.getElementById('btn-save-new');
@@ -95,14 +132,13 @@
         const descInput = document.getElementById('descrizione');
         const impInput = document.getElementById('importo');
         const dataInput = document.getElementById('data_spesa');
+        const tipoInput = document.getElementById('tipologia');
 
-        // Validazione base
-        if(!descInput.value || !impInput.value) {
-            alert("Compila tutti i campi obbligatori.");
+        if(!descInput.value || !impInput.value || !tipoInput.value) {
+            alert("Compila tutti i campi, inclusa la tipologia.");
             return;
         }
 
-        // UI Loading
         const originalNew = btnNew.innerHTML;
         const originalExit = btnExit.innerHTML;
         btnNew.classList.add('btn-loading');
@@ -111,7 +147,8 @@
         const nuovaSpesa = {
             data_spesa: dataInput.value,
             descrizione: descInput.value,
-            importo: parseFloat(impInput.value)
+            importo: parseFloat(impInput.value),
+            tipologia: tipoInput.value // Salvataggio della tipologia scelta
         };
 
         try {
@@ -121,12 +158,11 @@
             showToast();
 
             if (keepOpening) {
-                // Pulisce solo descrizione e importo, mantiene la data
                 descInput.value = '';
                 impInput.value = '';
+                tipoInput.selectedIndex = 0;
                 descInput.focus();
             } else {
-                // Torna alla lista
                 setTimeout(() => window.location.href = 'Elenco_spese.html', 800);
             }
 
@@ -145,6 +181,9 @@
         toast.classList.remove('hidden');
         setTimeout(() => toast.classList.add('hidden'), 2000);
     }
+
+    // Inizializza le tipologie all'avvio
+    window.onload = loadTipologie;
 </script>
 
 </body>
