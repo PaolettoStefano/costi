@@ -46,7 +46,7 @@
 
             <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Incarico</label>
-                <select id="incarico" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
+                <select id="incaricoa" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
                     <option value="" disabled selected>Caricamento incarichi...</option>
                 </select>
             </div>
@@ -123,18 +123,18 @@
         try {
             const { data, error } = await supabaseClient
                 .from('_carico')
-                .select('incarico')
-                .order('incarico', { ascending: true });
+                .select('incaricoa') // Corretto: legge campo incaricoa
+                .order('incaricoa', { ascending: true });
 
             if (error) throw error;
 
-            const select = document.getElementById('incarico');
+            const select = document.getElementById('incaricoa');
             select.innerHTML = '<option value="" disabled selected>Seleziona incarico</option>';
             
             data.forEach(item => {
                 const opt = document.createElement('option');
-                opt.value = item.incarico;
-                opt.textContent = item.incarico;
+                opt.value = item.incaricoa;
+                opt.textContent = item.incaricoa;
                 select.appendChild(opt);
             });
         } catch (err) { console.error("Errore incarichi:", err); }
@@ -167,7 +167,7 @@
             imp: document.getElementById('importo'),
             data: document.getElementById('data_spesa'),
             tipo: document.getElementById('tipologia'),
-            inc: document.getElementById('incarico')
+            inc: document.getElementById('incaricoa') // Corretto riferimento ID
         };
 
         if(!fields.desc.value || !fields.imp.value || !fields.tipo.value || !fields.inc.value) {
@@ -187,7 +187,7 @@
                 descrizione: fields.desc.value,
                 importo: importoFinale,
                 tipologia: fields.tipo.value,
-                incarico: fields.inc.value
+                incaricoa: fields.inc.value // Corretto: salva nel campo incaricoa
             }]);
 
             if (error) throw error;
