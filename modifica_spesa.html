@@ -34,7 +34,7 @@
         <div>
             <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Tipologia</label>
             <select id="tipologia" required class="w-full p-4 rounded-2xl outline-none">
-                <option value="" disabled selected>Caricamento categorie...</option>
+                <option value="" disabled selected>Caricamento...</option>
             </select>
         </div>
 
@@ -63,56 +63,65 @@
     const urlParams = new URLSearchParams(window.location.search);
     const recordId = urlParams.get('id');
 
-    // Funzione per caricare le tipologie dalla tabella tipologia_spesa
-    async function caricaTipologie() {
+    async function inizializzaPagina() {
+        if (!recordId) return;
+
         try {
-            const { data, error } = await supabaseClient
+            // 1. Carichiamo prima le tipologie
+            const { data: categorie, error: errCat } = await supabaseClient
                 .from('tipologia_spesa')
                 .select('descrizione')
                 .order('descrizione', { ascending: true });
 
-            if (error) throw error;
+            if (errCat) throw errCat;
 
             const select = document.getElementById('tipologia');
             select.innerHTML = '<option value="" disabled>Seleziona tipologia</option>';
 
-            data.forEach(tipo => {
+            categorie.forEach(tipo => {
                 const opt = document.createElement('option');
                 opt.value = tipo.descrizione;
                 opt.textContent = tipo.descrizione;
                 select.appendChild(opt);
             });
+
+            // 2. Solo dopo carichiamo il record specifico
+            const { data: record, error: errRec } = await supabaseClient
+                .from('gestione_costi')
+                .select('*')
+                .eq('id', recordId)
+                .single();
+
+            if (errRec) throw errRec;
+
+            if (record) {
+                document.getElementById('spesa-id').value = record.id;
+                document.getElementById('data_spesa').value = record.data_spesa;
+                document.getElementById('descrizione').value = record.descrizione || '';
+                document.getElementById('importo').value = record.importo;
+                
+                // Impostiamo il valore del select DOPO che le opzioni sono state create
+                setTimeout(() => {
+                    document.getElementById('tipologia').value = record.tipologia;
+                }, 10);
+            }
+
         } catch (err) {
-            console.error('Errore caricamento tipologie:', err.message);
-        }
-    }
-
-    async function caricaDatiRecord() {
-        if (!recordId) return;
-        
-        // Prima carichiamo le tipologie, poi il record
-        await caricaTipologie();
-
-        const { data, error } = await supabaseClient
-            .from('gestione_costi')
-            .select('*')
-            .eq('id', recordId)
-            .single();
-
-        if (data) {
-            document.getElementById('spesa-id').value = data.id;
-            document.getElementById('data_spesa').value = data.data_spesa;
-            document.getElementById('tipologia').value = data.tipologia;
-            document.getElementById('descrizione').value = data.descrizione;
-            document.getElementById('importo').value = data.importo;
+            console.error('Errore durante l\'inizializzazione:', err.message);
+            alert("Errore nel caricamento dati.");
         }
     }
 
     document.getElementById('form-modifica').onsubmit = async (e) => {
         e.preventDefault();
+        
+        // Prendiamo il valore esatto dal select
+        const selectTipologia = document.getElementById('tipologia');
+        const valoreTipologia = selectTipologia.value;
+
         const updatedData = {
             data_spesa: document.getElementById('data_spesa').value,
-            tipologia: document.getElementById('tipologia').value,
+            tipologia: valoreTipologia,
             descrizione: document.getElementById('descrizione').value,
             importo: parseFloat(document.getElementById('importo').value)
         };
@@ -129,7 +138,7 @@
         }
     };
 
-    window.onload = caricaDatiRecord;
+    window.onload = inizializzaPagina;
 </script>
 </body>
 </html>
