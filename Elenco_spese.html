@@ -21,6 +21,10 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .table-row:hover { background: rgba(255, 255, 255, 0.05); }
+        .month-divider {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
+            border-left: 4px solid #10b981;
+        }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -41,7 +45,14 @@
         </div>
     </div>
 
-    <div class="apple-glass rounded-[2rem] overflow-hidden">
+    <div id="quick-stats" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 hidden">
+        <div class="apple-glass p-6 rounded-3xl">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Totale Storico</p>
+            <h2 id="totale-generale" class="text-2xl font-black text-white">€ 0.00</h2>
+        </div>
+    </div>
+
+    <div class="apple-glass rounded-[2rem] overflow-hidden mb-10">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
@@ -64,7 +75,6 @@
 </div>
 
 <script>
-    // Configurazione Supabase (Usa le stesse credenziali del progetto consumi)
     const SB_URL = 'https://wleaywzitgcenbhumhov.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
@@ -93,27 +103,76 @@
             return;
         }
 
-        corpo.innerHTML = costi.map(item => {
-            const dSpesa = new Date(item.data_spesa).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        let htmlOrchestrator = '';
+        let currentMonthYear = '';
+        let monthTotal = 0;
+        let grandTotal = 0;
+
+        // Calcolo totali per mese e inserimento divisori
+        const formattedRows = [];
+
+        costi.forEach((item, index) => {
+            const dateObj = new Date(item.data_spesa);
+            const monthName = dateObj.toLocaleString('it-IT', { month: 'long' });
+            const year = dateObj.getFullYear();
+            const monthYearLabel = `${monthName} ${year}`;
+            const importo = parseFloat(item.importo) || 0;
+
+            grandTotal += importo;
+
+            // Se cambiamo mese, inseriamo prima il riepilogo del mese precedente (se esiste)
+            if (currentMonthYear !== "" && currentMonthYear !== monthYearLabel) {
+                // Inseriamo il totale del mese appena concluso nella riga di separazione successiva
+            }
+
+            // Se è un nuovo mese, creiamo la riga divisoria
+            if (currentMonthYear !== monthYearLabel) {
+                currentMonthYear = monthYearLabel;
+                
+                // Calcoliamo il totale solo per questo specifico mese
+                const totalForThisMonth = costi
+                    .filter(c => {
+                        const d = new Date(c.data_spesa);
+                        return `${d.toLocaleString('it-IT', { month: 'long' })} ${d.getFullYear()}` === monthYearLabel;
+                    })
+                    .reduce((acc, curr) => acc + (parseFloat(curr.importo) || 0), 0);
+
+                htmlOrchestrator += `
+                    <tr class="month-divider">
+                        <td colspan="2" class="p-4 text-xs font-black uppercase tracking-[0.2em] text-emerald-400">
+                            <i class="far fa-calendar-alt mr-2"></i> ${monthYearLabel}
+                        </td>
+                        <td class="p-4 text-right">
+                            <span class="text-[10px] text-slate-500 uppercase mr-2 font-bold">Totale Mese:</span>
+                            <span class="text-sm font-black text-white">€ ${totalForThisMonth.toFixed(2)}</span>
+                        </td>
+                        <td></td>
+                    </tr>
+                `;
+            }
+
+            const dSpesa = dateObj.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const dCreazione = new Date(item.data_creazione).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-            
-            return `
+
+            htmlOrchestrator += `
                 <tr class="table-row border-b border-white/5 transition-colors">
-                    <td class="p-5">
-                        <span class="font-bold text-white">${dSpesa}</span>
-                    </td>
+                    <td class="p-5 text-xs font-bold text-white">${dSpesa}</td>
                     <td class="p-5">
                         <p class="text-sm text-slate-300 font-medium">${item.descrizione || '-'}</p>
                     </td>
                     <td class="p-5 text-right">
-                        <span class="text-emerald-400 font-black">€ ${parseFloat(item.importo).toFixed(2)}</span>
+                        <span class="text-emerald-400 font-black">€ ${importo.toFixed(2)}</span>
                     </td>
-                    <td class="p-5 text-right text-[10px] text-slate-500 font-mono">
-                        ${dCreazione}
-                    </td>
+                    <td class="p-5 text-right text-[10px] text-slate-500 font-mono">${dCreazione}</td>
                 </tr>
             `;
-        }).join('');
+        });
+
+        corpo.innerHTML = htmlOrchestrator;
+        
+        // Mostra il totale generale in alto
+        document.getElementById('quick-stats').classList.remove('hidden');
+        document.getElementById('totale-generale').innerText = `€ ${grandTotal.toFixed(2)}`;
     }
 
     window.onload = fetchCosti;
