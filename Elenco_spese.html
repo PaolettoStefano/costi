@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Costi | Elenco & Budget</title>
+    <title>Gestione Costi | Elenco</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
@@ -21,12 +21,11 @@
             backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .budget-bar-bg { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); }
-        .progress-fill { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s; }
+        .progress-container { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); }
+        .progress-fill { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
         
         select { background: rgba(255, 255, 255, 0.05) !important; color: white !important; border: 1px solid rgba(255,255,255,0.1) !important; }
         .table-row:hover { background: rgba(255, 255, 255, 0.05); }
-        .hidden-section { display: none !important; }
         .text-positive { color: #10b981 !important; }
         .text-negative { color: #ef4444 !important; }
     </style>
@@ -37,45 +36,52 @@
     <div class="flex flex-col md:flex-row items-center justify-between mb-8 gap-6">
         <div>
             <h1 class="text-3xl font-black uppercase tracking-tighter text-emerald-500">Gestione <span class="text-white">Costi</span></h1>
-            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Archivio & Controllo Budget</p>
+            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest text-center md:text-left">Archivio Movimenti</p>
         </div>
         <div class="flex flex-wrap justify-center gap-3">
             <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-lg shadow-blue-900/20">
                 <i class="fas fa-file-excel mr-2"></i> Export
             </button>
             <a href="Nuova_spesa.html" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-lg shadow-emerald-900/20">
-                <i class="fas fa-plus mr-2"></i> Nuova Spesa
+                <i class="fas fa-plus mr-2"></i> Aggiungi
+            </a>
+            <a href="Riepilogo_statistiche.html" class="apple-glass px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase hover:bg-white/10 transition-all flex items-center">
+                <i class="fas fa-chart-line mr-2"></i> Dashboard
             </a>
         </div>
     </div>
 
-    <div class="apple-glass rounded-[2rem] p-8 mb-8 relative overflow-hidden">
+    <div class="apple-glass rounded-[2rem] p-8 mb-8 relative">
         <div class="flex justify-between items-end mb-4">
             <div>
-                <h3 id="budget-title" class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Budget Mensile Totale</h3>
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Stato Budget Mensile</h3>
                 <div class="flex items-baseline gap-2">
-                    <span id="label-speso" class="text-3xl font-black text-white">€ 0,00</span>
-                    <span id="label-totale-budget" class="text-slate-500 font-bold text-sm">su € 0,00</span>
+                    <span id="display-speso" class="text-3xl font-black text-white">€ 0,00</span>
+                    <span id="display-budget" class="text-slate-500 font-bold text-sm text-sm">di € ---</span>
                 </div>
             </div>
-            <button onclick="impostaBudget()" class="text-[10px] font-black uppercase text-emerald-500 hover:text-emerald-400 transition-colors">
-                <i class="fas fa-pen mr-1"></i> Modifica Budget
-            </button>
+            <a href="gestione_budget.html" class="text-[10px] font-black uppercase text-emerald-500 hover:text-emerald-400 transition-colors">
+                <i class="fas fa-cog mr-1"></i> Configura
+            </a>
         </div>
         
-        <div class="w-full h-4 budget-bar-bg rounded-full overflow-hidden">
-            <div id="budget-progress" class="h-full progress-fill w-0 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]"></div>
+        <div class="w-full h-3 progress-container rounded-full overflow-hidden">
+            <div id="bar-fill" class="h-full progress-fill w-0 bg-emerald-500"></div>
         </div>
         
         <div class="flex justify-between mt-3">
-            <p id="budget-status-text" class="text-[10px] font-bold uppercase text-slate-500 italic">Caricamento budget...</p>
-            <p id="budget-rimanente" class="text-[10px] font-black uppercase text-white tracking-widest"></p>
+            <p id="status-msg" class="text-[10px] font-bold uppercase text-slate-500 italic">Analisi in corso...</p>
+            <p id="status-rimanente" class="text-[10px] font-black uppercase text-white tracking-widest"></p>
         </div>
     </div>
 
     <div class="apple-glass p-6 rounded-[2rem] mb-6 flex flex-wrap gap-4">
-        <select id="filtro-incarico" onchange="applicaFiltri()" class="flex-1 p-3 rounded-xl text-xs font-bold outline-none"><option value="">Incarico: Tutti</option></select>
-        <select id="filtro-tipologia" onchange="applicaFiltri()" class="flex-1 p-3 rounded-xl text-xs font-bold outline-none"><option value="">Tipologia: Tutte</option></select>
+        <select id="filtro-incarico" onchange="applicaFiltri()" class="flex-1 p-3 rounded-xl text-xs font-bold outline-none">
+            <option value="">Incarico: Tutti</option>
+        </select>
+        <select id="filtro-tipologia" onchange="applicaFiltri()" class="flex-1 p-3 rounded-xl text-xs font-bold outline-none">
+            <option value="">Tipologia: Tutte</option>
+        </select>
     </div>
 
     <div class="apple-glass rounded-[2rem] overflow-hidden shadow-2xl">
@@ -88,7 +94,7 @@
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Tipologia</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Descrizione</th>
                         <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Importo</th>
-                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Azione</th>
+                        <th class="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Azioni</th>
                     </tr>
                 </thead>
                 <tbody id="tabella-corpo"></tbody>
@@ -105,11 +111,12 @@
 
     let datiOriginali = [];
     const oggi = new Date();
-    const meseCorrente = oggi.getMonth() + 1;
-    const annoCorrente = oggi.getFullYear();
+    const curMese = oggi.getMonth() + 1;
+    const curAnno = oggi.getFullYear();
 
-    async function inizializza() {
-        await Promise.all([fetchCosti(), fetchBudget()]);
+    async function init() {
+        await fetchCosti();
+        await fetchEApplicaBudget();
     }
 
     async function fetchCosti() {
@@ -119,90 +126,82 @@
             datiOriginali = data;
             popolaFiltri(data);
             renderTabella(data);
-            calcolaSpesaMeseCorrente();
         } catch (err) { console.error(err); }
         finally { document.getElementById('loader').classList.add('hidden'); }
     }
 
-    async function fetchBudget() {
-        const { data } = await supabaseClient.from('budget_mensile')
-            .select('importo_budget').eq('anno', annoCorrente).eq('mese', meseCorrente).maybeSingle();
+    async function fetchEApplicaBudget() {
+        // 1. Prendi il budget dalla tabella configurazione_budget
+        const { data: bData } = await supabaseClient
+            .from('configurazione_budget')
+            .select('importo_budget')
+            .eq('anno', curAnno)
+            .eq('mese', curMese)
+            .maybeSingle();
+
+        const budgetVal = bData ? parseFloat(bData.importo_budget) : 0;
         
-        const budget = data ? data.importo_budget : 0;
-        document.getElementById('label-totale-budget').innerText = `su € ${parseFloat(budget).toLocaleString('it-IT', {minimumFractionDigits: 2})}`;
-        window.currentBudget = budget;
-        aggiornaGraficaBudget();
-    }
-
-    async function impostaBudget() {
-        const nuovo = prompt("Inserisci il budget totale per questo mese (€):", window.currentBudget || 0);
-        if (nuovo !== null) {
-            const { error } = await supabaseClient.from('budget_mensile').upsert({
-                anno: annoCorrente, mese: meseCorrente, importo_budget: parseFloat(nuovo)
-            }, { onConflict: 'anno,mese' });
-            if (!error) fetchBudget();
-        }
-    }
-
-    function calcolaSpesaMeseCorrente() {
-        // Sommiamo solo le USCITE (importi negativi) del mese corrente
-        const speso = datiOriginali.filter(item => {
+        // 2. Calcola spesa reale del mese corrente (solo importi negativi)
+        const spesaMese = datiOriginali.filter(item => {
             const d = new Date(item.data_spesa);
-            return (d.getMonth() + 1) === meseCorrente && d.getFullYear() === annoCorrente && item.importo < 0;
+            return (d.getMonth() + 1) === curMese && d.getFullYear() === curAnno && item.importo < 0;
         }).reduce((acc, item) => acc + Math.abs(item.importo), 0);
 
-        window.currentSpeso = speso;
-        document.getElementById('label-speso').innerText = `€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}`;
-        aggiornaGraficaBudget();
-    }
-
-    function aggiornaGraficaBudget() {
-        const budget = window.currentBudget || 0;
-        const speso = window.currentSpeso || 0;
-        const prog = document.getElementById('budget-progress');
-        const statusText = document.getElementById('budget-status-text');
-        const rimanente = document.getElementById('budget-rimanente');
+        // 3. Aggiorna UI
+        document.getElementById('display-speso').innerText = `€ ${spesaMese.toLocaleString('it-IT', {minimumFractionDigits: 2})}`;
+        document.getElementById('display-budget').innerText = budgetVal > 0 ? `di € ${budgetVal.toLocaleString('it-IT')}` : "Budget non impostato";
         
-        if (budget === 0) {
-            prog.style.width = '0%';
-            statusText.innerText = "Budget non impostato per questo mese";
+        const bar = document.getElementById('bar-fill');
+        const msg = document.getElementById('status-msg');
+        const rim = document.getElementById('status-rimanente');
+
+        if (budgetVal <= 0) {
+            bar.style.width = '0%';
+            msg.innerText = "Configura un budget per il mese corrente";
             return;
         }
 
-        const perc = Math.min((speso / budget) * 100, 100);
-        prog.style.width = `${perc}%`;
+        const perc = Math.min((spesaMese / budgetVal) * 100, 100);
+        bar.style.width = `${perc}%`;
 
-        // Colori barra
-        if (perc < 70) { prog.className = 'h-full progress-fill bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]'; statusText.innerText = "Situazione Sotto Controllo"; statusText.className = "text-[10px] font-bold uppercase text-emerald-500 italic"; }
-        else if (perc < 100) { prog.className = 'h-full progress-fill bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.3)]'; statusText.innerText = "Attenzione, limite vicino"; statusText.className = "text-[10px] font-bold uppercase text-orange-500 italic"; }
-        else { prog.className = 'h-full progress-fill bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)] animate-pulse'; statusText.innerText = "BUDGET SUPERATO!"; statusText.className = "text-[10px] font-black uppercase text-red-500 italic"; }
+        if (perc < 75) {
+            bar.className = "h-full progress-fill bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]";
+            msg.innerText = "Spesa regolare";
+            msg.className = "text-[10px] font-bold uppercase text-emerald-500 italic";
+        } else if (perc < 100) {
+            bar.className = "h-full progress-fill bg-orange-500";
+            msg.innerText = "Attenzione al limite";
+            msg.className = "text-[10px] font-bold uppercase text-orange-500 italic";
+        } else {
+            bar.className = "h-full progress-fill bg-red-600 animate-pulse";
+            msg.innerText = "Budget Sforato!";
+            msg.className = "text-[10px] font-black uppercase text-red-500 italic";
+        }
 
-        rimanente.innerText = speso > budget ? `SFORATO DI € ${(speso-budget).toFixed(2)}` : `RIMANENTI: € ${(budget-speso).toFixed(2)}`;
+        rim.innerText = spesaMese > budgetVal ? `ECCESSO: € ${(spesaMese-budgetVal).toFixed(2)}` : `RESTANO: € ${(budgetVal-spesaMese).toFixed(2)}`;
     }
 
-    // Le funzioni popolaFiltri, applicaFiltri, renderTabella e exportToExcel rimangono simili alle precedenti ma ottimizzate...
     function popolaFiltri(data) {
         const incarichi = [...new Set(data.map(item => item.incaricoa).filter(Boolean))].sort();
         const tipologie = [...new Set(data.map(item => item.tipologia).filter(Boolean))].sort();
-        const selInc = document.getElementById('filtro-incarico');
-        const selTip = document.getElementById('filtro-tipologia');
-        incarichi.forEach(inc => selInc.add(new Option(`Incarico: ${inc}`, inc)));
-        tipologie.forEach(tip => selTip.add(new Option(`Tipologia: ${tip}`, tip)));
+        const sI = document.getElementById('filtro-incarico');
+        const sT = document.getElementById('filtro-tipologia');
+        incarichi.forEach(i => sI.add(new Option(`Incarico: ${i}`, i)));
+        tipologie.forEach(t => sT.add(new Option(`Tipo: ${t}`, t)));
     }
 
     function applicaFiltri() {
-        const valInc = document.getElementById('filtro-incarico').value;
-        const valTip = document.getElementById('filtro-tipologia').value;
-        const filtrati = datiOriginali.filter(item => (valInc === "" || item.incaricoa === valInc) && (valTip === "" || item.tipologia === valTip));
-        renderTabella(filtrati);
+        const vI = document.getElementById('filtro-incarico').value;
+        const vT = document.getElementById('filtro-tipologia').value;
+        const f = datiOriginali.filter(i => (vI === "" || i.incaricoa === vI) && (vT === "" || i.tipologia === vT));
+        renderTabella(f);
     }
 
     function renderTabella(costi) {
         const corpo = document.getElementById('tabella-corpo');
-        let html = '';
-        costi.forEach(item => {
+        corpo.innerHTML = costi.map(item => {
             const val = parseFloat(item.importo);
-            html += `
+            return `
                 <tr class="table-row border-b border-white/5 transition-colors">
                     <td class="p-5 text-xs font-bold text-white">${new Date(item.data_spesa).toLocaleDateString('it-IT')}</td>
                     <td class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-wider">${item.incaricoa || '-'}</td>
@@ -211,19 +210,18 @@
                     <td class="p-5 text-right font-black ${val >= 0 ? 'text-positive' : 'text-negative'}">€ ${val.toFixed(2)}</td>
                     <td class="p-5 text-center"><a href="modifica_spesa.html?id=${item.id}" class="text-blue-400 hover:scale-125 transition-transform inline-block"><i class="fas fa-edit"></i></a></td>
                 </tr>`;
-        });
-        corpo.innerHTML = html || '<tr><td colspan="6" class="p-10 text-center text-slate-500">Nessun dato</td></tr>';
+        }).join('') || '<tr><td colspan="6" class="p-10 text-center text-slate-500 font-bold">Nessun dato trovato</td></tr>';
     }
 
     function exportToExcel() {
-        const dataRows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo }));
-        const ws = XLSX.utils.json_to_sheet(dataRows);
+        const rows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo }));
+        const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Spese");
-        XLSX.writeFile(wb, "Export_Spese.xlsx");
+        XLSX.writeFile(wb, "Report_Spese.xlsx");
     }
 
-    window.onload = inizializza;
+    window.onload = init;
 </script>
 </body>
 </html>
