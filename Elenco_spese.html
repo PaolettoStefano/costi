@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Costi | Elenco</title>
+    <title>Gestione Costi | Elenco Strutturato</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
@@ -29,14 +29,14 @@
         .text-positive { color: #10b981 !important; }
         .text-negative { color: #ef4444 !important; }
 
-        /* Stili per il raggruppamento */
-        .year-header { cursor: pointer; background: rgba(255,255,255,0.03); transition: all 0.3s; }
-        .year-header:hover { background: rgba(255,255,255,0.08); }
-        .month-header { cursor: pointer; background: rgba(255,255,255,0.01); transition: all 0.3s; }
-        .month-header:hover { background: rgba(255,255,255,0.05); }
         .collapsed-content { display: none; }
-        .rotate-icon { transition: transform 0.3s; }
+        .rotate-icon { transition: transform 0.3s ease; }
         .is-open .rotate-icon { transform: rotate(90deg); }
+        
+        .year-header { cursor: pointer; transition: background 0.3s; }
+        .year-header:hover { background: rgba(255,255,255,0.05); }
+        .month-header { cursor: pointer; transition: background 0.3s; }
+        .month-header:hover { background: rgba(255,255,255,0.04); }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -44,8 +44,8 @@
 <div class="max-w-7xl mx-auto">
     <div class="flex flex-col md:flex-row items-center justify-between mb-8 gap-6">
         <div>
-            <h1 class="text-3xl font-black uppercase tracking-tighter text-emerald-500">Gestione <span class="text-white">Costi</span></h1>
-            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest text-center md:text-left">Archivio Movimenti</p>
+            <h1 class="text-3xl font-black uppercase tracking-tighter text-emerald-500">Archivio <span class="text-white">Costi</span></h1>
+            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest text-center md:text-left">Suddivisione Temporale & Budget</p>
         </div>
         <div class="flex flex-wrap justify-center gap-3">
             <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-lg shadow-blue-900/20">
@@ -55,21 +55,21 @@
                 <i class="fas fa-plus mr-2"></i> Aggiungi
             </a>
             <a href="gestione_budget.html" class="apple-glass px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase hover:bg-white/10 transition-all flex items-center">
-                <i class="fas fa-cog mr-2"></i> Imposta Budget
+                <i class="fas fa-cog mr-2"></i> Configura Budget
             </a>
         </div>
     </div>
 
-    <div class="apple-glass p-6 rounded-[2rem] mb-6 flex flex-wrap gap-4">
+    <div class="apple-glass p-6 rounded-[2rem] mb-8 flex flex-wrap gap-4">
         <select id="filtro-incarico" onchange="applicaFiltri()" class="flex-1 p-3 rounded-xl text-xs font-bold outline-none">
-            <option value="">Incarico: Tutti</option>
+            <option value="">Tutti gli Incarichi</option>
         </select>
         <select id="filtro-tipologia" onchange="applicaFiltri()" class="flex-1 p-3 rounded-xl text-xs font-bold outline-none">
-            <option value="">Tipologia: Tutte</option>
+            <option value="">Tutte le Tipologie</option>
         </select>
     </div>
 
-    <div id="main-content-area" class="space-y-6"></div>
+    <div id="accordion-container" class="space-y-6"></div>
 
     <div id="loader" class="flex justify-center mt-10"><div class="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div></div>
 </div>
@@ -84,23 +84,22 @@
     const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 
     async function init() {
-        await Promise.all([fetchCosti(), fetchTuttiBudget()]);
-        renderStruttura(datiOriginali);
-    }
-
-    async function fetchCosti() {
         try {
-            const { data, error } = await supabaseClient.from('gestione_costi').select('*').order('data_spesa', { ascending: false });
-            if (error) throw error;
-            datiOriginali = data;
-            popolaFiltri(data);
-        } catch (err) { console.error(err); }
-        finally { document.getElementById('loader').classList.add('hidden'); }
-    }
-
-    async function fetchTuttiBudget() {
-        const { data } = await supabaseClient.from('configurazione_budget').select('*');
-        datiBudget = data || [];
+            const [resCosti, resBudget] = await Promise.all([
+                supabaseClient.from('gestione_costi').select('*').order('data_spesa', { ascending: false }),
+                supabaseClient.from('configurazione_budget').select('*')
+            ]);
+            
+            datiOriginali = resCosti.data || [];
+            datiBudget = resBudget.data || [];
+            
+            popolaFiltri(datiOriginali);
+            renderAccordion(datiOriginali);
+        } catch (err) {
+            console.error("Errore inizializzazione:", err);
+        } finally {
+            document.getElementById('loader').classList.add('hidden');
+        }
     }
 
     function popolaFiltri(data) {
@@ -108,107 +107,115 @@
         const tipologie = [...new Set(data.map(item => item.tipologia).filter(Boolean))].sort();
         const sI = document.getElementById('filtro-incarico');
         const sT = document.getElementById('filtro-tipologia');
-        incarichi.forEach(i => sI.add(new Option(`Incarico: ${i}`, i)));
-        tipologie.forEach(t => sT.add(new Option(`Tipo: ${t}`, t)));
+        incarichi.forEach(i => sI.add(new Option(i, i)));
+        tipologie.forEach(t => sT.add(new Option(t, t)));
     }
 
     function applicaFiltri() {
         const vI = document.getElementById('filtro-incarico').value;
         const vT = document.getElementById('filtro-tipologia').value;
         const filtrati = datiOriginali.filter(i => (vI === "" || i.incaricoa === vI) && (vT === "" || i.tipologia === vT));
-        renderStruttura(filtrati);
+        renderAccordion(filtrati);
     }
 
-    function toggleSection(id) {
-        const content = document.getElementById(id);
-        const header = content.previousElementSibling;
-        content.classList.toggle('collapsed-content');
+    function toggle(id) {
+        const el = document.getElementById(id);
+        const header = el.previousElementSibling;
+        el.classList.toggle('collapsed-content');
         header.classList.toggle('is-open');
     }
 
-    function renderStruttura(costi) {
-        const area = document.getElementById('main-content-area');
-        area.innerHTML = '';
+    function renderAccordion(costi) {
+        const container = document.getElementById('accordion-container');
+        container.innerHTML = '';
 
-        if (costi.length === 0) {
-            area.innerHTML = '<div class="apple-glass p-10 text-center text-slate-500 font-bold rounded-[2rem]">Nessun dato trovato</div>';
-            return;
-        }
-
-        // Raggruppamento dati
-        const grouped = {};
+        const tree = {};
         costi.forEach(item => {
-            const d = new Date(item.data_spesa);
-            const y = d.getFullYear();
-            const m = d.getMonth() + 1;
-            if (!grouped[y]) grouped[y] = {};
-            if (!grouped[y][m]) grouped[y][m] = [];
-            grouped[y][m].push(item);
+            const date = new Date(item.data_spesa);
+            const y = date.getFullYear();
+            const m = date.getMonth() + 1;
+            if (!tree[y]) tree[y] = {};
+            if (!tree[y][m]) tree[y][m] = [];
+            tree[y][m].push(item);
         });
 
-        const years = Object.keys(grouped).sort((a, b) => b - a);
+        const sortedYears = Object.keys(tree).sort((a, b) => b - a);
 
-        years.forEach(year => {
-            const yearId = `year-${year}`;
+        sortedYears.forEach(year => {
+            const yearId = `year-section-${year}`;
             let yearHtml = `
-                <div class="year-wrapper">
-                    <div onclick="toggleSection('${yearId}')" class="year-header apple-glass p-6 rounded-[2rem] flex items-center justify-between mb-2">
-                        <h2 class="text-2xl font-black tracking-tighter text-white"><i class="fas fa-chevron-right mr-4 rotate-icon"></i> ${year}</h2>
-                        <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">${Object.keys(grouped[year]).length} Mesi registrati</span>
+                <div class="year-group">
+                    <div onclick="toggle('${yearId}')" class="year-header apple-glass p-6 rounded-[2rem] flex items-center justify-between mb-2">
+                        <h2 class="text-2xl font-black text-white"><i class="fas fa-chevron-right mr-4 text-emerald-500 rotate-icon"></i> ${year}</h2>
+                        <span class="text-[10px] font-black uppercase text-slate-500 tracking-widest">${Object.keys(tree[year]).length} mesi con attività</span>
                     </div>
-                    <div id="${yearId}" class="collapsed-content space-y-4 ml-4 md:ml-8 mt-4 mb-8">
+                    <div id="${yearId}" class="collapsed-content space-y-4 pt-2 pb-6 pl-4 md:pl-10">
             `;
 
-            const months = Object.keys(grouped[year]).sort((a, b) => b - a);
-            months.forEach(month => {
-                const monthId = `month-${year}-${month}`;
-                const speseMese = grouped[year][month];
+            const sortedMonths = Object.keys(tree[year]).sort((a, b) => b - a);
+            sortedMonths.forEach(month => {
+                const monthId = `month-section-${year}-${month}`;
+                const speseMese = tree[year][month];
                 
-                // Calcolo Budget per questo specifico mese
-                const budgetObj = datiBudget.find(b => b.anno == year && b.mese == month);
-                const budgetVal = budgetObj ? parseFloat(budgetObj.importo_budget) : 0;
-                const spesaTotale = speseMese.filter(i => i.importo < 0).reduce((acc, i) => acc + Math.abs(i.importo), 0);
-                const perc = budgetVal > 0 ? Math.min((spesaTotale / budgetVal) * 100, 100) : 0;
+                const budgetRow = datiBudget.find(b => b.anno == year && b.mese == month);
+                const budgetLimit = budgetRow ? parseFloat(budgetRow.importo_budget) : 0;
+                const spesoReale = speseMese.filter(i => i.importo < 0).reduce((acc, i) => acc + Math.abs(i.importo), 0);
+                const perc = budgetLimit > 0 ? Math.min((spesoReale / budgetLimit) * 100, 100) : 0;
 
                 yearHtml += `
-                    <div class="month-wrapper">
-                        <div onclick="toggleSection('${monthId}')" class="month-header apple-glass p-5 rounded-[1.5rem] flex flex-col gap-4">
+                    <div class="month-group">
+                        <div onclick="toggle('${monthId}')" class="month-header apple-glass p-5 rounded-[1.5rem] flex flex-col gap-4">
                             <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-bold text-emerald-400"><i class="fas fa-chevron-right mr-3 rotate-icon text-xs"></i> ${nomiMesi[month-1]}</h3>
-                                <div class="text-right">
-                                    <span class="text-[10px] font-black text-slate-500 uppercase">Spesa:</span>
-                                    <span class="text-sm font-black text-white ml-1">€ ${spesaTotale.toLocaleString('it-IT', {minimumFractionDigits:2})}</span>
+                                <h3 class="text-lg font-black text-white/80"><i class="fas fa-chevron-right mr-3 text-[10px] text-slate-500 rotate-icon"></i> ${nomiMesi[month-1]}</h3>
+                                <div class="flex items-center gap-6">
+                                    <div class="text-right">
+                                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Totale Uscite</p>
+                                        <p class="text-sm font-black text-white">€ ${spesoReale.toLocaleString('it-IT', {minimumFractionDigits:2})}</p>
+                                    </div>
+                                    <a href="gestione_budget.html?mese=${month}&anno=${year}" onclick="event.stopPropagation()" class="bg-white/5 hover:bg-emerald-500/20 p-2 rounded-lg transition-colors group">
+                                        <i class="fas fa-cog text-slate-500 group-hover:text-emerald-400 text-xs"></i>
+                                    </a>
                                 </div>
                             </div>
-                            
+
                             <div class="w-full">
-                                <div class="flex justify-between text-[9px] font-black uppercase tracking-tighter mb-1">
-                                    <span class="${perc >= 100 ? 'text-red-500' : 'text-slate-400'}">${budgetVal > 0 ? perc.toFixed(0) + '%' : 'Budget non impostato'}</span>
-                                    <span class="text-slate-500 italic">${budgetVal > 0 ? 'Residuo: € ' + (budgetVal - spesaTotale).toFixed(2) : ''}</span>
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <span class="text-[9px] font-black uppercase ${perc >= 100 ? 'text-red-500' : 'text-emerald-500'}">
+                                        ${budgetLimit > 0 ? perc.toFixed(0) + '% del budget' : 'Budget non impostato'}
+                                    </span>
+                                    <span class="text-[9px] font-bold text-slate-500">
+                                        ${budgetLimit > 0 ? 'Rimanente: € ' + (budgetLimit - spesoReale).toFixed(2) : ''}
+                                    </span>
                                 </div>
                                 <div class="w-full h-1.5 progress-container rounded-full overflow-hidden">
-                                    <div class="h-full progress-fill ${perc >= 100 ? 'bg-red-600' : (perc > 80 ? 'bg-orange-500' : 'bg-emerald-500')}" style="width: ${perc}%"></div>
+                                    <div class="h-full progress-fill ${perc >= 100 ? 'bg-red-600 animate-pulse' : (perc > 80 ? 'bg-orange-500' : 'bg-emerald-500')}" 
+                                         style="width: ${perc}%"></div>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="${monthId}" class="collapsed-content mt-3 px-2">
-                            <div class="apple-glass rounded-[1.5rem] overflow-hidden">
-                                <table class="w-full text-left border-collapse">
+                        <div id="${monthId}" class="collapsed-content mt-3 overflow-hidden">
+                            <div class="apple-glass rounded-[1.5rem] overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead class="bg-white/5 border-b border-white/5">
+                                        <tr>
+                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500">Data</th>
+                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500">Tipo</th>
+                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500">Descrizione</th>
+                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500 text-right">Importo</th>
+                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500 text-center">Edit</th>
+                                        </tr>
+                                    </thead>
                                     <tbody class="divide-y divide-white/5">
-                                        ${speseMese.map(item => {
-                                            const v = parseFloat(item.importo);
-                                            return `
-                                                <tr class="table-row">
-                                                    <td class="p-4 text-[10px] font-bold text-white w-24">${new Date(item.data_spesa).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'})}</td>
-                                                    <td class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-tight hidden md:table-cell">${item.incaricoa || '-'}</td>
-                                                    <td class="p-4"><span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded-full text-[9px] text-emerald-500 font-black uppercase">${item.tipologia}</span></td>
-                                                    <td class="p-4 text-xs text-slate-300 max-w-[150px] truncate">${item.descrizione || '-'}</td>
-                                                    <td class="p-4 text-right font-black text-xs ${v >= 0 ? 'text-positive' : 'text-negative'}">€ ${v.toFixed(2)}</td>
-                                                    <td class="p-4 text-center"><a href="modifica_spesa.html?id=${item.id}" class="text-blue-400 hover:scale-125 transition-transform inline-block"><i class="fas fa-edit text-xs"></i></a></td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
+                                        ${speseMese.map(i => `
+                                            <tr class="table-row transition-colors">
+                                                <td class="p-4 text-[10px] font-bold text-white">${new Date(i.data_spesa).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'})}</td>
+                                                <td class="p-4"><span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[8px] text-emerald-400 font-black uppercase">${i.tipologia}</span></td>
+                                                <td class="p-4 text-[11px] text-slate-400 truncate max-w-[120px] md:max-w-xs">${i.descrizione || '-'}</td>
+                                                <td class="p-4 text-right font-black text-xs ${i.importo < 0 ? 'text-negative' : 'text-positive'}">€ ${parseFloat(i.importo).toFixed(2)}</td>
+                                                <td class="p-4 text-center"><a href="modifica_spesa.html?id=${i.id}" class="text-blue-500/50 hover:text-blue-400 transition-colors"><i class="fas fa-edit text-xs"></i></a></td>
+                                            </tr>
+                                        `).join('')}
                                     </tbody>
                                 </table>
                             </div>
@@ -218,7 +225,7 @@
             });
 
             yearHtml += `</div></div>`;
-            area.innerHTML += yearHtml;
+            container.innerHTML += yearHtml;
         });
     }
 
@@ -227,7 +234,7 @@
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Spese");
-        XLSX.writeFile(wb, "Report_Spese_Completo.xlsx");
+        XLSX.writeFile(wb, "Report_Completo.xlsx");
     }
 
     window.onload = init;
