@@ -81,7 +81,7 @@
     </div>
 
     <div class="apple-glass rounded-[2.5rem] overflow-hidden">
-        <div class="p-6 border-b border-white/10 bg-white/5">
+        <div class="p-6 border-b border-white/10 bg-white/5 text-center md:text-left">
             <h2 class="text-[10px] font-black uppercase tracking-widest text-slate-300">Budget Salvati</h2>
         </div>
         <div class="overflow-x-auto">
@@ -108,10 +108,36 @@
     const form = document.getElementById('form-budget');
     const listaBudget = document.getElementById('lista-budget');
 
-    // Imposta anno e mese correnti come default
-    const d = new Date();
-    document.getElementById('anno').value = d.getFullYear();
-    document.getElementById('mese').value = d.getMonth() + 1;
+    // Funzione per inizializzare i campi dal URL o dalla data corrente
+    function initFields() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlMese = urlParams.get('mese');
+        const urlAnno = urlParams.get('anno');
+        
+        const d = new Date();
+        
+        // Se i parametri sono nel URL usa quelli, altrimenti data odierna
+        document.getElementById('mese').value = urlMese ? urlMese : (d.getMonth() + 1);
+        document.getElementById('anno').value = urlAnno ? urlAnno : d.getFullYear();
+        
+        // Se siamo arrivati qui con parametri specifici, proviamo a caricare l'importo esistente
+        if(urlMese && urlAnno) {
+            checkExistingBudget(urlMese, urlAnno);
+        }
+    }
+
+    async function checkExistingBudget(m, a) {
+        const { data, error } = await supabaseClient
+            .from('configurazione_budget')
+            .select('importo_budget')
+            .eq('mese', parseInt(m))
+            .eq('anno', parseInt(a))
+            .maybeSingle();
+        
+        if (data) {
+            document.getElementById('importo_budget').value = data.importo_budget;
+        }
+    }
 
     async function loadBudgets() {
         const { data, error } = await supabaseClient
@@ -153,10 +179,7 @@
 
         if (error) alert("Errore: " + error.message);
         else {
-            form.reset();
-            // Ripristina anno e mese dopo il reset
-            document.getElementById('anno').value = d.getFullYear();
-            document.getElementById('mese').value = d.getMonth() + 1;
+            alert("Budget salvato correttamente!");
             loadBudgets();
         }
     };
@@ -173,7 +196,10 @@
         return mesi[m - 1];
     }
 
-    window.onload = loadBudgets;
+    window.onload = () => {
+        initFields();
+        loadBudgets();
+    };
 </script>
 </body>
 </html>
