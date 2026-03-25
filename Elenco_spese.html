@@ -43,6 +43,19 @@
         .status-btn { cursor: pointer; padding: 10px; border-radius: 12px; transition: all 0.2s; }
         .loading-spin { animation: spin 1s linear infinite; opacity: 0.5; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Stile Select */
+        select {
+            background: rgba(255, 255, 255, 0.5) !important;
+            border: 1px solid rgba(255, 255, 255, 0.7) !important;
+            border-radius: 1rem !important;
+            padding: 0.75rem 1rem !important;
+            font-size: 0.875rem !important;
+            color: #1e293b !important;
+            outline: none !important;
+            transition: all 0.2s;
+        }
+        select:focus { border-color: #10b981 !important; background: white !important; }
     </style>
 </head>
 <body class="p-6 md:p-12">
@@ -60,6 +73,34 @@
             <a href="Nuova_spesa.html" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase transition-all shadow-md shadow-emerald-200 flex items-center">
                 <i class="fas fa-plus mr-2"></i> Aggiungi
             </a>
+        </div>
+    </div>
+
+    <div class="apple-glass p-6 rounded-[2rem] mb-10 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-2 block">Incarico</label>
+            <select id="filter-incarico" onchange="applicaFiltri()" class="w-full">
+                <option value="">Seleziona...</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-2 block">Tipologia</label>
+            <select id="filter-tipologia" onchange="applicaFiltri()" class="w-full">
+                <option value="">Seleziona...</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-2 block">Stato Pagamento</label>
+            <select id="filter-stato" onchange="applicaFiltri()" class="w-full">
+                <option value="">Seleziona...</option>
+                <option value="si">Completato (Sì)</option>
+                <option value="no">In sospeso (No)</option>
+            </select>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="resetFiltri()" class="w-full bg-slate-200/50 hover:bg-slate-200 text-slate-600 py-3 rounded-2xl text-[10px] font-bold uppercase transition-all">
+                Reset
+            </button>
         </div>
     </div>
 
@@ -84,9 +125,53 @@
             ]);
             datiOriginali = resCosti.data || [];
             datiBudget = resBudget.data || [];
+            
+            popolaTendine(datiOriginali);
             renderAccordion(datiOriginali);
         } catch (err) { console.error(err); }
         finally { document.getElementById('loader').classList.add('hidden'); }
+    }
+
+    function popolaTendine(data) {
+        const incarichi = [...new Set(data.map(i => i.incaricoa).filter(Boolean))].sort();
+        const tipologie = [...new Set(data.map(i => i.tipologia).filter(Boolean))].sort();
+
+        const selInc = document.getElementById('filter-incarico');
+        const selTip = document.getElementById('filter-tipologia');
+
+        incarichi.forEach(inc => {
+            const opt = document.createElement('option');
+            opt.value = inc; opt.textContent = inc;
+            selInc.appendChild(opt);
+        });
+
+        tipologie.forEach(tip => {
+            const opt = document.createElement('option');
+            opt.value = tip; opt.textContent = tip;
+            selTip.appendChild(opt);
+        });
+    }
+
+    function applicaFiltri() {
+        const fInc = document.getElementById('filter-incarico').value;
+        const fTip = document.getElementById('filter-tipologia').value;
+        const fSta = document.getElementById('filter-stato').value;
+
+        const datiFiltrati = datiOriginali.filter(item => {
+            const matchInc = fInc === "" || item.incaricoa === fInc;
+            const matchTip = fTip === "" || item.tipologia === fTip;
+            const matchSta = fSta === "" || (item.completato || 'no') === fSta;
+            return matchInc && matchTip && matchSta;
+        });
+
+        renderAccordion(datiFiltrati);
+    }
+
+    function resetFiltri() {
+        document.getElementById('filter-incarico').value = "";
+        document.getElementById('filter-tipologia').value = "";
+        document.getElementById('filter-stato').value = "";
+        renderAccordion(datiOriginali);
     }
 
     async function toggleStato(id, currentVal, event) {
@@ -100,8 +185,7 @@
             if (error) throw error;
             const idx = datiOriginali.findIndex(d => d.id == id);
             if (idx !== -1) datiOriginali[idx].completato = nuovoStato;
-            icon.className = nuovoStato === 'si' ? 'fas fa-check-circle text-emerald-500 text-xl' : 'fas fa-times-circle text-red-400 text-xl';
-            btn.onclick = (e) => toggleStato(id, nuovoStato, e);
+            applicaFiltri(); // Riapplica i filtri per mantenere la coerenza visiva
         } catch (err) { alert("Errore"); }
     }
 
@@ -115,6 +199,11 @@
     function renderAccordion(costi) {
         const container = document.getElementById('accordion-container');
         container.innerHTML = '';
+        if (costi.length === 0) {
+            container.innerHTML = '<div class="text-center p-20 text-slate-400 font-medium">Nessun costo trovato con i filtri selezionati.</div>';
+            return;
+        }
+
         const tree = {};
         costi.forEach(item => {
             const date = new Date(item.data_spesa);
@@ -146,7 +235,7 @@
                         <div class="flex items-center justify-between">
                             <h3 class="text-xl font-semibold text-slate-700"><i class="fas fa-chevron-right mr-4 text-sm rotate-icon"></i> ${nomiMesi[month-1]}</h3>
                             <div class="text-right">
-                                <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Totale Uscite</span>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite nel periodo</span>
                                 <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
                             </div>
                         </div>
