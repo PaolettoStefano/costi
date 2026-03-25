@@ -44,7 +44,6 @@
         .loading-spin { animation: spin 1s linear infinite; opacity: 0.5; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* Stile Select */
         select {
             background: rgba(255, 255, 255, 0.5) !important;
             border: 1px solid rgba(255, 255, 255, 0.7) !important;
@@ -135,16 +134,13 @@
     function popolaTendine(data) {
         const incarichi = [...new Set(data.map(i => i.incaricoa).filter(Boolean))].sort();
         const tipologie = [...new Set(data.map(i => i.tipologia).filter(Boolean))].sort();
-
         const selInc = document.getElementById('filter-incarico');
         const selTip = document.getElementById('filter-tipologia');
-
         incarichi.forEach(inc => {
             const opt = document.createElement('option');
             opt.value = inc; opt.textContent = inc;
             selInc.appendChild(opt);
         });
-
         tipologie.forEach(tip => {
             const opt = document.createElement('option');
             opt.value = tip; opt.textContent = tip;
@@ -156,14 +152,12 @@
         const fInc = document.getElementById('filter-incarico').value;
         const fTip = document.getElementById('filter-tipologia').value;
         const fSta = document.getElementById('filter-stato').value;
-
         const datiFiltrati = datiOriginali.filter(item => {
             const matchInc = fInc === "" || item.incaricoa === fInc;
             const matchTip = fTip === "" || item.tipologia === fTip;
             const matchSta = fSta === "" || (item.completato || 'no') === fSta;
             return matchInc && matchTip && matchSta;
         });
-
         renderAccordion(datiFiltrati);
     }
 
@@ -185,7 +179,7 @@
             if (error) throw error;
             const idx = datiOriginali.findIndex(d => d.id == id);
             if (idx !== -1) datiOriginali[idx].completato = nuovoStato;
-            applicaFiltri(); // Riapplica i filtri per mantenere la coerenza visiva
+            applicaFiltri();
         } catch (err) { alert("Errore"); }
     }
 
@@ -230,6 +224,14 @@
                 const speso = spese.filter(i => i.importo < 0).reduce((acc, i) => acc + Math.abs(i.importo), 0);
                 const perc = limit > 0 ? Math.min((speso / limit) * 100, 100) : 0;
 
+                // NUOVA LOGICA COLORE BARRA
+                let colorClass = 'bg-emerald-500'; // Verde default
+                if (perc >= 90) {
+                    colorClass = 'bg-red-500';     // Rosso sopra 90%
+                } else if (perc >= 70) {
+                    colorClass = 'bg-amber-400';   // Giallo/Ambra tra 70% e 90%
+                }
+
                 html += `<div class="month-group">
                     <div onclick="toggle('${monthId}')" class="month-header apple-glass p-6 rounded-[2rem] flex flex-col gap-5">
                         <div class="flex items-center justify-between">
@@ -240,7 +242,7 @@
                             </div>
                         </div>
                         <div class="w-full h-2 progress-container rounded-full overflow-hidden">
-                            <div class="h-full ${perc >= 90 ? 'bg-red-500' : 'bg-emerald-500'} rounded-full transition-all duration-1000" style="width:${perc}%"></div>
+                            <div class="h-full ${colorClass} rounded-full transition-all duration-1000" style="width:${perc}%"></div>
                         </div>
                     </div>
                     <div id="${monthId}" class="collapsed-content mt-4 overflow-hidden">
