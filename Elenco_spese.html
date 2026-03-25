@@ -38,9 +38,9 @@
         .month-header { cursor: pointer; transition: background 0.3s; }
         .month-header:hover { background: rgba(255,255,255,0.04); }
 
-        /* Stili per il toggle dello stato */
-        .status-btn { cursor: pointer; transition: all 0.2s; }
-        .status-btn:hover { transform: scale(1.2); }
+        .status-btn { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+        .status-btn i { transition: all 0.2s ease; }
+        .status-btn:active i { transform: scale(0.8); }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -74,7 +74,6 @@
     </div>
 
     <div id="accordion-container" class="space-y-6"></div>
-
     <div id="loader" class="flex justify-center mt-10"><div class="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div></div>
 </div>
 
@@ -93,10 +92,8 @@
                 supabaseClient.from('gestione_costi').select('*').order('data_spesa', { ascending: false }),
                 supabaseClient.from('configurazione_budget').select('*')
             ]);
-            
             datiOriginali = resCosti.data || [];
             datiBudget = resBudget.data || [];
-            
             popolaFiltri(datiOriginali);
             renderAccordion(datiOriginali);
         } catch (err) {
@@ -106,22 +103,35 @@
         }
     }
 
-    // Funzione per cambiare lo stato direttamente dall'elenco
-    async function toggleStato(id, statoAttuale) {
-        const nuovoStato = statoAttuale === 'si' ? 'no' : 'si';
+    // MODIFICA QUI: Aggiornamento UI istantaneo senza ricaricare l'accordion
+    async function toggleStato(id, currentVal, btnElement) {
+        event.stopPropagation();
+        const nuovoStato = currentVal === 'si' ? 'no' : 'si';
         
+        // Cambio immediato dell'icona (UI)
+        const icon = btnElement.querySelector('i');
+        if (nuovoStato === 'si') {
+            icon.className = 'fas fa-check-circle text-emerald-500 text-sm';
+        } else {
+            icon.className = 'fas fa-times-circle text-red-500 text-sm';
+        }
+        
+        // Aggiorna attributo per il prossimo clic
+        btnElement.setAttribute('onclick', `toggleStato('${id}', '${nuovoStato}', this)`);
+
+        // Aggiorna Database in background
         const { error } = await supabaseClient
             .from('gestione_costi')
             .update({ completato: nuovoStato })
             .eq('id', id);
 
         if (error) {
-            alert("Errore nell'aggiornamento: " + error.message);
+            alert("Errore salvataggio: " + error.message);
+            init(); // Solo in caso di errore ricarichiamo tutto per sicurezza
         } else {
-            // Aggiorna localmente i dati per evitare reload totale
+            // Aggiorna silenziosamente il dato locale per l'export Excel
             const index = datiOriginali.findIndex(d => d.id === id);
             if (index !== -1) datiOriginali[index].completato = nuovoStato;
-            applicaFiltri(); 
         }
     }
 
@@ -151,7 +161,6 @@
     function renderAccordion(costi) {
         const container = document.getElementById('accordion-container');
         container.innerHTML = '';
-
         const tree = {};
         costi.forEach(item => {
             const date = new Date(item.data_spesa);
@@ -163,7 +172,6 @@
         });
 
         const sortedYears = Object.keys(tree).sort((a, b) => b - a);
-
         sortedYears.forEach(year => {
             const yearId = `year-section-${year}`;
             let yearHtml = `
@@ -174,12 +182,10 @@
                     </div>
                     <div id="${yearId}" class="collapsed-content space-y-4 pt-2 pb-6 pl-4 md:pl-10">
             `;
-
             const sortedMonths = Object.keys(tree[year]).sort((a, b) => b - a);
             sortedMonths.forEach(month => {
                 const monthId = `month-section-${year}-${month}`;
                 const speseMese = tree[year][month];
-                
                 const budgetRow = datiBudget.find(b => b.anno == year && b.mese == month);
                 const budgetLimit = budgetRow ? parseFloat(budgetRow.importo_budget) : 0;
                 const spesoReale = speseMese.filter(i => i.importo < 0).reduce((acc, i) => acc + Math.abs(i.importo), 0);
@@ -200,23 +206,18 @@
                                     </a>
                                 </div>
                             </div>
-
                             <div class="w-full">
                                 <div class="flex justify-between items-center mb-1.5">
                                     <span class="text-[9px] font-black uppercase ${perc >= 100 ? 'text-red-500' : 'text-emerald-500'}">
                                         ${budgetLimit > 0 ? perc.toFixed(0) + '% del budget' : 'Budget non impostato'}
                                     </span>
-                                    <span class="text-[9px] font-bold text-slate-500">
-                                        ${budgetLimit > 0 ? 'Rimanente: € ' + (budgetLimit - spesoReale).toFixed(2) : ''}
-                                    </span>
+                                    <span class="text-[9px] font-bold text-slate-500">${budgetLimit > 0 ? 'Rimanente: € ' + (budgetLimit - spesoReale).toFixed(2) : ''}</span>
                                 </div>
                                 <div class="w-full h-1.5 progress-container rounded-full overflow-hidden">
-                                    <div class="h-full progress-fill ${perc >= 100 ? 'bg-red-600 animate-pulse' : (perc > 80 ? 'bg-orange-500' : 'bg-emerald-500')}" 
-                                         style="width: ${perc}%"></div>
+                                    <div class="h-full progress-fill ${perc >= 100 ? 'bg-red-600 animate-pulse' : (perc > 80 ? 'bg-orange-500' : 'bg-emerald-500')}" style="width: ${perc}%"></div>
                                 </div>
                             </div>
                         </div>
-
                         <div id="${monthId}" class="collapsed-content mt-3 overflow-hidden">
                             <div class="apple-glass rounded-[1.5rem] overflow-x-auto">
                                 <table class="w-full text-left">
@@ -240,7 +241,7 @@
                                                 <td class="p-4 text-[11px] text-slate-400 truncate max-w-[120px] md:max-w-xs">${i.descrizione || '-'}</td>
                                                 <td class="p-4 text-right font-black text-xs ${i.importo < 0 ? 'text-negative' : 'text-positive'}">€ ${parseFloat(i.importo).toFixed(2)}</td>
                                                 <td class="p-4 text-center">
-                                                    <span onclick="toggleStato('${i.id}', '${i.completato || 'no'}')" class="status-btn">
+                                                    <span onclick="toggleStato('${i.id}', '${i.completato || 'no'}', this)" class="status-btn">
                                                         <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-500'} text-sm"></i>
                                                     </span>
                                                 </td>
@@ -254,14 +255,13 @@
                     </div>
                 `;
             });
-
             yearHtml += `</div></div>`;
             container.innerHTML += yearHtml;
         });
     }
 
     function exportToExcel() {
-        const rows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo, Completato: i.completato }));
+        const rows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo, Stato: i.completato }));
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Spese");
