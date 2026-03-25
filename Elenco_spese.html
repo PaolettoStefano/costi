@@ -19,7 +19,6 @@
             min-height: 100vh;
         }
 
-        /* Effetto Apple Glass - Versione Chiara */
         .apple-glass {
             background: rgba(255, 255, 255, 0.4);
             backdrop-filter: blur(20px);
@@ -30,7 +29,6 @@
 
         .progress-container { background: rgba(0, 0, 0, 0.05); border: 1px solid rgba(255,255,255,0.3); }
         
-        /* Select e Input più moderni */
         select { 
             background: rgba(255, 255, 255, 0.6) !important; 
             color: #334155 !important; 
@@ -39,30 +37,19 @@
         }
 
         .table-row:hover { background: rgba(255, 255, 255, 0.5); }
-        .text-positive { color: #059669 !important; } /* Smeraldo scuro */
-        .text-negative { color: #dc2626 !important; } /* Rosso vivido */
+        .text-positive { color: #059669 !important; }
+        .text-negative { color: #dc2626 !important; }
 
         .collapsed-content { display: none; }
         .rotate-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .is-open .rotate-icon { transform: rotate(90deg); }
         
-        .year-header, .month-header { 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-        }
-        .year-header:hover, .month-header:hover { 
-            background: rgba(255,255,255,0.7);
-            transform: translateY(-1px);
-        }
+        .year-header, .month-header { cursor: pointer; transition: all 0.3s ease; }
+        .year-header:hover, .month-header:hover { background: rgba(255,255,255,0.7); transform: translateY(-1px); }
 
         .status-btn { cursor: pointer; padding: 10px; border-radius: 12px; transition: all 0.2s; }
         .loading-spin { animation: spin 1s linear infinite; opacity: 0.5; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        /* Scrollbar più fine */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
     </style>
 </head>
 <body class="p-6 md:p-12">
@@ -85,24 +72,20 @@
 
     <div class="apple-glass p-8 rounded-[2.5rem] mb-10 flex flex-wrap gap-6">
         <div class="flex-1 min-w-[200px]">
-            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">Incarico</label>
+            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">Filtra per Incarico</label>
             <select id="filtro-incarico" onchange="applicaFiltri()" class="w-full p-4 rounded-2xl outline-none shadow-sm"></select>
         </div>
         <div class="flex-1 min-w-[200px]">
-            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">Tipologia</label>
+            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">Filtra per Tipologia</label>
             <select id="filtro-tipologia" onchange="applicaFiltri()" class="w-full p-4 rounded-2xl outline-none shadow-sm"></select>
         </div>
     </div>
 
     <div id="accordion-container" class="space-y-8"></div>
-    
-    <div id="loader" class="flex justify-center mt-20">
-        <div class="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-    </div>
+    <div id="loader" class="flex justify-center mt-20"><div class="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div></div>
 </div>
 
 <script>
-    // Supabase config
     const SB_URL = 'https://wleaywzitgcenbhumhov.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
@@ -125,7 +108,6 @@
         finally { document.getElementById('loader').classList.add('hidden'); }
     }
 
-    // Toggle rimane invariato come logica, cambia solo l'estetica
     async function toggleStato(id, currentVal, event) {
         if(event) event.stopPropagation();
         const nuovoStato = currentVal === 'si' ? 'no' : 'si';
@@ -137,7 +119,7 @@
             if (error) throw error;
             const idx = datiOriginali.findIndex(d => d.id == id);
             if (idx !== -1) datiOriginali[idx].completato = nuovoStato;
-            icon.className = nuovoStato === 'si' ? 'fas fa-check-circle text-emerald-500 text-lg' : 'fas fa-times-circle text-red-400 text-lg';
+            icon.className = nuovoStato === 'si' ? 'fas fa-check-circle text-emerald-500 text-xl' : 'fas fa-times-circle text-red-400 text-xl';
             btn.onclick = (e) => toggleStato(id, nuovoStato, e);
         } catch (err) { alert("Errore"); }
     }
@@ -209,11 +191,12 @@
                         </div>
                     </div>
                     <div id="${monthId}" class="collapsed-content mt-4 overflow-hidden">
-                        <div class="apple-glass rounded-[2rem] overflow-x-auto shadow-sm">
+                        <div class="apple-glass rounded-[2rem] overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead class="bg-white/30 text-[10px] uppercase text-slate-400 font-bold">
                                     <tr>
                                         <th class="p-5">Data</th>
+                                        <th class="p-5">Incarico</th>
                                         <th class="p-5">Tipologia</th>
                                         <th class="p-5">Descrizione</th>
                                         <th class="p-5 text-right">Importo</th>
@@ -226,6 +209,7 @@
                                         const isDone = (i.completato || 'no') === 'si';
                                         return `<tr class="table-row transition-colors">
                                             <td class="p-5 text-sm text-slate-600 font-medium">${new Date(i.data_spesa).toLocaleDateString()}</td>
+                                            <td class="p-5 text-sm text-slate-900 font-bold">${i.incaricoa || '-'}</td>
                                             <td class="p-5"><span class="px-3 py-1 bg-white/50 border border-black/5 rounded-full text-[10px] text-slate-500 font-bold uppercase">${i.tipologia}</span></td>
                                             <td class="p-5 text-sm text-slate-600 truncate max-w-[150px]">${i.descrizione || '-'}</td>
                                             <td class="p-5 text-right font-bold text-base ${i.importo < 0 ? 'text-negative' : 'text-positive'}">€ ${i.importo.toFixed(2)}</td>
