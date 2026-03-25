@@ -28,13 +28,6 @@
         }
 
         .progress-container { background: rgba(0, 0, 0, 0.05); border: 1px solid rgba(255,255,255,0.3); }
-        
-        select { 
-            background: rgba(255, 255, 255, 0.6) !important; 
-            color: #334155 !important; 
-            border: 1px solid rgba(255,255,255,0.8) !important;
-            font-size: 0.95rem !important;
-        }
 
         .table-row:hover { background: rgba(255, 255, 255, 0.5); }
         .text-positive { color: #059669 !important; }
@@ -70,17 +63,6 @@
         </div>
     </div>
 
-    <div class="apple-glass p-8 rounded-[2.5rem] mb-10 flex flex-wrap gap-6">
-        <div class="flex-1 min-w-[200px]">
-            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">Filtra per Incarico</label>
-            <select id="filtro-incarico" onchange="applicaFiltri()" class="w-full p-4 rounded-2xl outline-none shadow-sm"></select>
-        </div>
-        <div class="flex-1 min-w-[200px]">
-            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">Filtra per Tipologia</label>
-            <select id="filtro-tipologia" onchange="applicaFiltri()" class="w-full p-4 rounded-2xl outline-none shadow-sm"></select>
-        </div>
-    </div>
-
     <div id="accordion-container" class="space-y-8"></div>
     <div id="loader" class="flex justify-center mt-20"><div class="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div></div>
 </div>
@@ -102,7 +84,6 @@
             ]);
             datiOriginali = resCosti.data || [];
             datiBudget = resBudget.data || [];
-            popolaFiltri(datiOriginali);
             renderAccordion(datiOriginali);
         } catch (err) { console.error(err); }
         finally { document.getElementById('loader').classList.add('hidden'); }
@@ -122,23 +103,6 @@
             icon.className = nuovoStato === 'si' ? 'fas fa-check-circle text-emerald-500 text-xl' : 'fas fa-times-circle text-red-400 text-xl';
             btn.onclick = (e) => toggleStato(id, nuovoStato, e);
         } catch (err) { alert("Errore"); }
-    }
-
-    function popolaFiltri(data) {
-        const incarichi = ["Tutti gli Incarichi", ...new Set(data.map(item => item.incaricoa).filter(Boolean))].sort();
-        const tipologie = ["Tutte le Tipologie", ...new Set(data.map(item => item.tipologia).filter(Boolean))].sort();
-        const sI = document.getElementById('filtro-incarico');
-        const sT = document.getElementById('filtro-tipologia');
-        sI.innerHTML = ''; sT.innerHTML = '';
-        incarichi.forEach(i => sI.add(new Option(i, i === "Tutti gli Incarichi" ? "" : i)));
-        tipologie.forEach(t => sT.add(new Option(t, t === "Tutte le Tipologie" ? "" : t)));
-    }
-
-    function applicaFiltri() {
-        const vI = document.getElementById('filtro-incarico').value;
-        const vT = document.getElementById('filtro-tipologia').value;
-        const filtrati = datiOriginali.filter(i => (vI === "" || i.incaricoa === vI) && (vT === "" || i.tipologia === vT));
-        renderAccordion(filtrati);
     }
 
     function toggle(id) {
