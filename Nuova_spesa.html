@@ -8,28 +8,41 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
         body { 
             font-family: 'Inter', sans-serif; 
-            background: radial-gradient(circle at top left, #0f172a, #020617);
-            color: #f8fafc; min-height: 100vh;
-            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #1e293b; 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .apple-glass {
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        input, textarea, select {
-            background: rgba(255, 255, 255, 0.05) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
-        }
-        input:focus, select:focus { border-color: #10b981 !important; outline: none; }
-        option { background: #0f172a; color: white; }
-        .btn-loading { pointer-events: none; opacity: 0.6; }
 
-        /* Stile per il toggle completato */
+        .apple-glass {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+        }
+
+        input, textarea, select {
+            background: rgba(255, 255, 255, 0.5) !important;
+            border: 1px solid rgba(255, 255, 255, 0.7) !important;
+            border-radius: 1.25rem !important;
+            color: #1e293b !important;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus { 
+            border-color: #10b981 !important; 
+            background: white !important;
+            outline: none; 
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+
         .status-toggle {
             display: flex;
             align-items: center;
@@ -37,80 +50,94 @@
             cursor: pointer;
             user-select: none;
             padding: 12px;
-            border-radius: 16px;
-            transition: background 0.3s;
+            border-radius: 1.25rem;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
-        .status-toggle:hover { background: rgba(255,255,255,0.05); }
+        .status-toggle:hover { background: rgba(255, 255, 255, 0.6); }
+
+        .text-negative { color: #dc2626 !important; }
+        .text-positive { color: #059669 !important; }
     </style>
 </head>
-<body class="p-6">
+<body class="p-4 md:p-8">
 
-<div class="w-full max-w-md">
-    <div class="text-center mb-8">
-        <h1 class="text-3xl font-black uppercase tracking-tighter text-emerald-500">Nuovo <span class="text-white">Movimento</span></h1>
-    </div>
+<div class="w-full max-w-2xl">
+    <div class="flex items-center justify-between mb-8 px-4">
+        <a href="Elenco_spese.html" class="text-slate-400 hover:text-slate-600 transition-colors">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </a>
+        <div class="text-center">
+            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Nuovo <span class="text-emerald-600">Movimento</span></h1>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Registrazione Spesa o Entrata</p>
+        </div>
+        <div class="w-6"></div> </div>
 
-    <div class="apple-glass p-8 rounded-[2.5rem]">
-        <form id="form-spesa" class="space-y-5">
+    <div class="apple-glass p-6 md:p-10 rounded-[2.5rem]">
+        <form id="form-spesa" class="space-y-6">
+            
             <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Data</label>
-                <input type="date" id="data_spesa" required class="w-full p-4 rounded-2xl text-sm">
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Data Registrazione</label>
+                <input type="date" id="data_spesa" required class="w-full p-4 text-sm">
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Incarico</label>
-                    <select id="incaricoa" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Incarico a</label>
+                    <select id="incaricoa" required class="w-full p-4 text-sm cursor-pointer">
                         <option value="" disabled selected>Caricamento...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tipologia</label>
-                    <select id="tipologia" onchange="aggiornaColoreImporto()" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Tipologia</label>
+                    <select id="tipologia" onchange="aggiornaColoreImporto()" required class="w-full p-4 text-sm cursor-pointer">
                         <option value="" disabled selected>Caricamento...</option>
                     </select>
                 </div>
             </div>
 
             <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Descrizione</label>
-                <textarea id="descrizione" rows="2" placeholder="Dettagli..." required class="w-full p-4 rounded-2xl text-sm resize-none"></textarea>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Descrizione</label>
+                <textarea id="descrizione" rows="2" placeholder="Scrivi qui i dettagli del movimento..." required class="w-full p-4 text-sm resize-none"></textarea>
             </div>
 
             <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Importo (€)</label>
-                <input type="number" id="importo" step="0.01" placeholder="0.00" required class="w-full p-4 rounded-2xl text-xl font-black transition-colors duration-300 text-white">
-                <p id="info-segno" class="text-[9px] text-slate-500 mt-2 ml-1 uppercase font-bold italic">Seleziona una categoria</p>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Importo (€)</label>
+                <input type="number" id="importo" step="0.01" placeholder="0.00" required class="w-full p-5 text-2xl font-black transition-colors duration-300">
+                <p id="info-segno" class="text-[10px] text-slate-400 mt-2 ml-2 uppercase font-bold">Seleziona una categoria per vedere il segno</p>
             </div>
 
-            <div class="pt-2">
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Stato Pagamento</label>
-                <div onclick="toggleStatusUI()" class="status-toggle border border-white/10 bg-white/5">
-                    <div id="status-icon-container" class="w-10 h-10 rounded-full flex items-center justify-center bg-red-500/20">
-                        <i id="status-icon" class="fas fa-times text-red-500"></i>
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Stato Pagamento</label>
+                <div onclick="toggleStatusUI()" class="status-toggle">
+                    <div id="status-icon-container" class="w-12 h-12 rounded-2xl flex items-center justify-center bg-red-100">
+                        <i id="status-icon" class="fas fa-times text-red-500 text-lg"></i>
                     </div>
                     <div>
-                        <p id="status-text" class="text-xs font-black uppercase tracking-tight text-red-500">Non Completato</p>
-                        <p class="text-[9px] text-slate-500 font-bold uppercase">Clicca per cambiare</p>
+                        <p id="status-text" class="text-sm font-bold uppercase text-red-500">In Sospeso</p>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Tocca per segnare come completato</p>
                     </div>
                     <input type="hidden" id="completato_val" value="no">
                 </div>
             </div>
 
-            <div class="flex flex-col gap-3 pt-4">
-                <button type="button" onclick="saveData(true)" id="btn-save-new" class="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-4 rounded-2xl uppercase tracking-widest text-[10px] border border-white/10">
-                    Salva e Aggiungi Altra
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                <button type="button" onclick="saveData(true)" class="w-full bg-white/60 hover:bg-white text-slate-700 font-bold py-4 rounded-2xl uppercase tracking-widest text-[10px] border border-white/50 transition-all">
+                    <i class="fas fa-plus-circle mr-2"></i> Salva e Nuovo
                 </button>
-                <button type="button" onclick="saveData(false)" id="btn-save-exit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-emerald-900/20">
-                    Salva e Vai alla Lista
+                <button type="button" onclick="saveData(false)" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-200 transition-all">
+                    <i class="fas fa-save mr-2"></i> Salva e Chiudi
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-<div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 apple-glass px-8 py-4 rounded-full border-emerald-500/50 hidden z-50">
-    <p class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Registrato!</p>
+<div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 apple-glass px-8 py-4 rounded-full border-emerald-500/30 hidden z-50">
+    <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest flex items-center">
+        <i class="fas fa-check-circle mr-2"></i> Registrato con successo
+    </p>
 </div>
 
 <script>
@@ -125,7 +152,6 @@
         await Promise.all([loadTipologie(), loadIncarichi()]);
     }
 
-    // Gestione visiva del nuovo campo completato
     function toggleStatusUI() {
         const valInput = document.getElementById('completato_val');
         const iconContainer = document.getElementById('status-icon-container');
@@ -134,16 +160,16 @@
 
         if (valInput.value === 'no') {
             valInput.value = 'si';
-            iconContainer.classList.replace('bg-red-500/20', 'bg-emerald-500/20');
-            icon.className = 'fas fa-check text-emerald-500';
+            iconContainer.className = 'w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-100';
+            icon.className = 'fas fa-check text-emerald-600 text-lg';
             text.innerText = 'Completato';
-            text.classList.replace('text-red-500', 'text-emerald-500');
+            text.className = 'text-sm font-bold uppercase text-emerald-600';
         } else {
             valInput.value = 'no';
-            iconContainer.classList.replace('bg-emerald-500/20', 'bg-red-500/20');
-            icon.className = 'fas fa-times text-red-500';
-            text.innerText = 'Non Completato';
-            text.classList.replace('text-emerald-500', 'text-red-500');
+            iconContainer.className = 'w-12 h-12 rounded-2xl flex items-center justify-center bg-red-100';
+            icon.className = 'fas fa-times text-red-500 text-lg';
+            text.innerText = 'In Sospeso';
+            text.className = 'text-sm font-bold uppercase text-red-500';
         }
     }
 
@@ -152,7 +178,7 @@
             const { data, error } = await supabaseClient.from('tipologia_spesa').select('descrizione, segno').order('descrizione');
             if (error) throw error;
             const select = document.getElementById('tipologia');
-            select.innerHTML = '<option value="" disabled selected>Categoria</option>';
+            select.innerHTML = '<option value="" disabled selected>Categoria...</option>';
             data.forEach(tipo => {
                 mappaSegni[tipo.descrizione] = Number(tipo.segno);
                 const opt = new Option(tipo.descrizione, tipo.descrizione);
@@ -166,7 +192,7 @@
         try {
             const { data, error } = await supabaseClient.from('in_carico').select('incaricoa').order('incaricoa');
             if (error) throw error;
-            select.innerHTML = '<option value="" disabled selected>Incarico</option>';
+            select.innerHTML = '<option value="" disabled selected>Incarico a...</option>';
             data.forEach(item => {
                 if (item.incaricoa) select.add(new Option(item.incaricoa, item.incaricoa));
             });
@@ -180,15 +206,13 @@
         const segno = mappaSegni[tipo];
 
         if (segno === 1) {
-            inputImp.classList.remove('text-red-400', 'text-white');
-            inputImp.classList.add('text-emerald-400');
-            info.innerText = "Verrà salvato come ENTRATA (+)";
-            info.classList.replace('text-slate-500', 'text-emerald-500');
+            inputImp.className = "w-full p-5 text-2xl font-black transition-colors duration-300 text-positive";
+            info.innerText = "Il movimento sarà registrato come ENTRATA (+)";
+            info.className = "text-[10px] text-emerald-600 mt-2 ml-2 uppercase font-bold italic";
         } else {
-            inputImp.classList.remove('text-emerald-400', 'text-white');
-            inputImp.classList.add('text-red-400');
-            info.innerText = "Verrà salvato come USCITA (-)";
-            info.classList.replace('text-emerald-500', 'text-slate-500');
+            inputImp.className = "w-full p-5 text-2xl font-black transition-colors duration-300 text-negative";
+            info.innerText = "Il movimento sarà registrato come USCITA (-)";
+            info.className = "text-[10px] text-red-500 mt-2 ml-2 uppercase font-bold italic";
         }
     }
 
@@ -203,7 +227,7 @@
         };
 
         if(!fields.desc.value || !fields.imp.value || !fields.tipo.value || !fields.inc.value) {
-            alert("Compila tutti i campi!"); return;
+            alert("⚠️ Per favore, compila tutti i campi obbligatori."); return;
         }
 
         const valoreInserito = parseFloat(fields.imp.value);
@@ -216,7 +240,7 @@
                 importo: importoFinale,
                 tipologia: fields.tipo.value,
                 incaricoa: fields.inc.value,
-                completato: fields.comp.value // INVIO DEL NUOVO CAMPO
+                completato: fields.comp.value
             }]);
 
             if (error) throw error;
@@ -225,14 +249,13 @@
             if (keepOpening) {
                 fields.desc.value = ''; fields.imp.value = ''; 
                 fields.tipo.selectedIndex = 0; fields.inc.selectedIndex = 0;
-                fields.imp.classList.remove('text-emerald-400', 'text-red-400');
-                fields.imp.classList.add('text-white');
-                // Reset toggle UI
+                inputImp = document.getElementById('importo');
+                inputImp.className = "w-full p-5 text-2xl font-black transition-colors duration-300";
                 if(fields.comp.value === 'si') toggleStatusUI(); 
             } else {
                 setTimeout(() => window.location.href = 'Elenco_spese.html', 800);
             }
-        } catch (err) { alert(err.message); }
+        } catch (err) { alert("Errore nel salvataggio: " + err.message); }
     }
 
     function showToast() {
