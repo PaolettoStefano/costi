@@ -14,6 +14,19 @@
         input, select { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; transition: 0.3s; }
         input:focus, select:focus { border-color: #10b981 !important; outline: none; box-shadow: 0 0 15px rgba(16, 185, 129, 0.1); }
         option { background: #020617; color: white; }
+
+        /* Stile per il toggle completato */
+        .status-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+            padding: 12px;
+            border-radius: 16px;
+            transition: background 0.3s;
+        }
+        .status-toggle:hover { background: rgba(255,255,255,0.05); }
     </style>
 </head>
 <body class="p-4">
@@ -48,6 +61,20 @@
             <p class="text-[9px] text-slate-500 mt-2 italic ml-1">* Verrà registrato come uscita (negativo)</p>
         </div>
 
+        <div class="pt-2">
+            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-2 ml-1">Stato Pagamento</label>
+            <div onclick="toggleStatusUI()" class="status-toggle border border-white/10 bg-white/5">
+                <div id="status-icon-container" class="w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                    <i id="status-icon" class="fas"></i>
+                </div>
+                <div>
+                    <p id="status-text" class="text-xs font-black uppercase tracking-tight"></p>
+                    <p class="text-[9px] text-slate-500 font-bold uppercase">Clicca per cambiare</p>
+                </div>
+                <input type="hidden" id="completato_val" value="no">
+            </div>
+        </div>
+
         <div class="flex flex-col gap-3 pt-4">
             <button id="btn-save" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest transition-all shadow-lg shadow-emerald-900/20">
                 <i class="fas fa-save mr-2"></i> Conferma Modifica
@@ -60,14 +87,39 @@
 </div>
 
 <script>
-    // --- CONFIGURAZIONE CONNESSIONE ---
     const SB_URL = 'https://wleaywzitgcenbhumhov.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-    // --- LOGICA DI PAGINA ---
     const urlParams = new URLSearchParams(window.location.search);
     const recordId = urlParams.get('id');
+
+    // Funzione per gestire graficamente il toggle
+    function setStatusUI(valore) {
+        const valInput = document.getElementById('completato_val');
+        const iconContainer = document.getElementById('status-icon-container');
+        const icon = document.getElementById('status-icon');
+        const text = document.getElementById('status-text');
+
+        valInput.value = valore;
+
+        if (valore === 'si') {
+            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-emerald-500/20';
+            icon.className = 'fas fa-check text-emerald-500';
+            text.innerText = 'Completato';
+            text.className = 'text-xs font-black uppercase tracking-tight text-emerald-500';
+        } else {
+            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-red-500/20';
+            icon.className = 'fas fa-times text-red-500';
+            text.innerText = 'Non Completato';
+            text.className = 'text-xs font-black uppercase tracking-tight text-red-500';
+        }
+    }
+
+    function toggleStatusUI() {
+        const current = document.getElementById('completato_val').value;
+        setStatusUI(current === 'si' ? 'no' : 'si');
+    }
 
     async function init() {
         if (!recordId) {
@@ -77,7 +129,6 @@
         }
 
         try {
-            // 1. Carica le opzioni della tipologia dalla tabella dedicata
             const { data: tipologie, error: tErr } = await supabaseClient
                 .from('tipologia_spesa')
                 .select('descrizione')
@@ -88,7 +139,6 @@
             const selectElem = document.getElementById('field-tipologia');
             selectElem.innerHTML = tipologie.map(t => `<option value="${t.descrizione}">${t.descrizione}</option>`).join('');
 
-            // 2. Carica i dati attuali della spesa
             const { data: record, error: rErr } = await supabaseClient
                 .from('gestione_costi')
                 .select('*')
@@ -97,12 +147,13 @@
 
             if (rErr) throw rErr;
 
-            // 3. Popola i campi
             document.getElementById('field-data').value = record.data_spesa;
             document.getElementById('field-descrizione').value = record.descrizione;
             document.getElementById('field-tipologia').value = record.tipologia;
-            // Mostriamo l'importo come positivo (Math.abs) per la modifica
             document.getElementById('field-importo').value = Math.abs(record.importo);
+            
+            // Imposta lo stato iniziale dal DB
+            setStatusUI(record.completato === 'si' ? 'si' : 'no');
 
         } catch (err) {
             console.error("Errore inizializzazione:", err);
@@ -110,25 +161,21 @@
         }
     }
 
-    // --- AZIONE DI SALVATAGGIO ---
     document.getElementById('btn-save').addEventListener('click', async () => {
         const btn = document.getElementById('btn-save');
-        
-        // Raccolta Valori
         const vData = document.getElementById('field-data').value;
         const vTipo = document.getElementById('field-tipologia').value;
         const vDesc = document.getElementById('field-descrizione').value;
         const vImpRaw = parseFloat(document.getElementById('field-importo').value);
+        const vComp = document.getElementById('completato_val').value;
 
         if (!vData || !vTipo || isNaN(vImpRaw)) {
             alert("Tutti i campi sono obbligatori!");
             return;
         }
 
-        // Calcolo Importo: Trasforma sempre in negativo (Spesa)
         const vImportoFinale = vImpRaw > 0 ? vImpRaw * -1 : vImpRaw;
 
-        // UI Loading
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Salvataggio...';
 
@@ -139,13 +186,12 @@
                     data_spesa: vData,
                     tipologia: vTipo,
                     descrizione: vDesc,
-                    importo: vImportoFinale
+                    importo: vImportoFinale,
+                    completato: vComp // AGGIORNAMENTO DEL CAMPO STATO
                 })
                 .eq('id', recordId);
 
             if (error) throw error;
-
-            // Successo: Torna alla lista
             window.location.href = 'Elenco_spese.html';
 
         } catch (err) {
@@ -155,7 +201,6 @@
         }
     });
 
-    // Avvio al caricamento del DOM
     document.addEventListener('DOMContentLoaded', init);
 </script>
 
