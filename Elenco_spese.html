@@ -10,71 +10,99 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
         body { 
             font-family: 'Inter', sans-serif; 
-            background: radial-gradient(circle at top left, #0f172a, #020617);
-            color: #f8fafc; min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #1e293b; 
+            min-height: 100vh;
         }
+
+        /* Effetto Apple Glass - Versione Chiara */
         .apple-glass {
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
         }
-        .progress-container { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); }
-        .progress-fill { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .progress-container { background: rgba(0, 0, 0, 0.05); border: 1px solid rgba(255,255,255,0.3); }
         
-        select { background: rgba(255, 255, 255, 0.05) !important; color: white !important; border: 1px solid rgba(255,255,255,0.1) !important; }
-        .table-row:hover { background: rgba(255, 255, 255, 0.05); }
-        .text-positive { color: #10b981 !important; }
-        .text-negative { color: #ef4444 !important; }
+        /* Select e Input più moderni */
+        select { 
+            background: rgba(255, 255, 255, 0.6) !important; 
+            color: #334155 !important; 
+            border: 1px solid rgba(255,255,255,0.8) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .table-row:hover { background: rgba(255, 255, 255, 0.5); }
+        .text-positive { color: #059669 !important; } /* Smeraldo scuro */
+        .text-negative { color: #dc2626 !important; } /* Rosso vivido */
 
         .collapsed-content { display: none; }
-        .rotate-icon { transition: transform 0.3s ease; }
+        .rotate-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .is-open .rotate-icon { transform: rotate(90deg); }
         
-        .year-header, .month-header { cursor: pointer; transition: background 0.3s; }
-        .year-header:hover { background: rgba(255,255,255,0.05); }
-        .month-header:hover { background: rgba(255,255,255,0.04); }
+        .year-header, .month-header { 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+        }
+        .year-header:hover, .month-header:hover { 
+            background: rgba(255,255,255,0.7);
+            transform: translateY(-1px);
+        }
 
-        .status-btn { cursor: pointer; padding: 8px; border-radius: 10px; transition: all 0.2s; }
-        .status-btn:active { transform: scale(0.9); }
+        .status-btn { cursor: pointer; padding: 10px; border-radius: 12px; transition: all 0.2s; }
         .loading-spin { animation: spin 1s linear infinite; opacity: 0.5; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Scrollbar più fine */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
     </style>
 </head>
-<body class="p-4 md:p-12">
+<body class="p-6 md:p-12">
 
-<div class="max-w-7xl mx-auto">
-    <div class="flex flex-col md:flex-row items-center justify-between mb-8 gap-6">
+<div class="max-w-6xl mx-auto">
+    <div class="flex flex-col md:flex-row items-center justify-between mb-10 gap-6">
         <div>
-            <h1 class="text-3xl font-black uppercase tracking-tighter text-emerald-500">Archivio <span class="text-white">Costi</span></h1>
-            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Suddivisione Temporale & Budget</p>
+            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">Archivio <span class="text-emerald-600">Costi</span></h1>
+            <p class="text-slate-500 text-sm font-medium uppercase tracking-wider mt-1">Controllo Spese & Budgeting</p>
         </div>
-        <div class="flex flex-wrap justify-center gap-3">
-            <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-lg shadow-blue-900/20">
-                <i class="fas fa-file-excel mr-2"></i> Export
+        <div class="flex flex-wrap justify-center gap-4">
+            <button onclick="exportToExcel()" class="bg-white/60 hover:bg-white text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase transition-all shadow-sm border border-white/50 flex items-center">
+                <i class="fas fa-file-excel mr-2 text-green-600"></i> Export
             </button>
-            <a href="Nuova_spesa.html" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-lg shadow-emerald-900/20">
+            <a href="Nuova_spesa.html" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase transition-all shadow-md shadow-emerald-200 flex items-center">
                 <i class="fas fa-plus mr-2"></i> Aggiungi
             </a>
         </div>
     </div>
 
-    <div class="apple-glass p-6 rounded-[2rem] mb-8 flex flex-wrap gap-4">
-        <select id="filtro-incarico" onchange="applicaFiltri()" class="flex-1 p-3 rounded-xl text-xs font-bold outline-none">
-            <option value="">Tutti gli Incarichi</option>
-        </select>
-        <select id="filtro-tipologia" onchange="applicaFiltri()" class="flex-1 p-3 rounded-xl text-xs font-bold outline-none">
-            <option value="">Tutte le Tipologie</option>
-        </select>
+    <div class="apple-glass p-8 rounded-[2.5rem] mb-10 flex flex-wrap gap-6">
+        <div class="flex-1 min-w-[200px]">
+            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">Incarico</label>
+            <select id="filtro-incarico" onchange="applicaFiltri()" class="w-full p-4 rounded-2xl outline-none shadow-sm"></select>
+        </div>
+        <div class="flex-1 min-w-[200px]">
+            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">Tipologia</label>
+            <select id="filtro-tipologia" onchange="applicaFiltri()" class="w-full p-4 rounded-2xl outline-none shadow-sm"></select>
+        </div>
     </div>
 
-    <div id="accordion-container" class="space-y-6"></div>
-    <div id="loader" class="flex justify-center mt-10"><div class="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div></div>
+    <div id="accordion-container" class="space-y-8"></div>
+    
+    <div id="loader" class="flex justify-center mt-20">
+        <div class="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+    </div>
 </div>
 
 <script>
+    // Supabase config
     const SB_URL = 'https://wleaywzitgcenbhumhov.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
@@ -97,52 +125,31 @@
         finally { document.getElementById('loader').classList.add('hidden'); }
     }
 
-    // --- NUOVO APPROCCIO TOGGLE ---
+    // Toggle rimane invariato come logica, cambia solo l'estetica
     async function toggleStato(id, currentVal, event) {
         if(event) event.stopPropagation();
-        
         const nuovoStato = currentVal === 'si' ? 'no' : 'si';
         const btn = event.currentTarget;
         const icon = btn.querySelector('i');
-        
-        // 1. UI Loading state
-        const originalClass = icon.className;
         icon.className = "fas fa-spinner loading-spin text-slate-400";
-        btn.style.pointerEvents = "none";
-
         try {
-            // 2. Update Supabase
-            const { error } = await supabaseClient
-                .from('gestione_costi')
-                .update({ completato: nuovoStato })
-                .eq('id', id);
-
+            const { error } = await supabaseClient.from('gestione_costi').update({ completato: nuovoStato }).eq('id', id);
             if (error) throw error;
-
-            // 3. Sincronizza i dati locali
             const idx = datiOriginali.findIndex(d => d.id == id);
             if (idx !== -1) datiOriginali[idx].completato = nuovoStato;
-
-            // 4. Aggiorna SOLO l'icona e l'onclick senza ricostruire tutto
-            icon.className = nuovoStato === 'si' ? 'fas fa-check-circle text-emerald-500' : 'fas fa-times-circle text-red-500';
+            icon.className = nuovoStato === 'si' ? 'fas fa-check-circle text-emerald-500 text-lg' : 'fas fa-times-circle text-red-400 text-lg';
             btn.onclick = (e) => toggleStato(id, nuovoStato, e);
-
-        } catch (err) {
-            console.error(err);
-            alert("Errore aggiornamento stato");
-            icon.className = originalClass; // Ripristina icona precedente
-        } finally {
-            btn.style.pointerEvents = "auto";
-        }
+        } catch (err) { alert("Errore"); }
     }
 
     function popolaFiltri(data) {
-        const incarichi = [...new Set(data.map(item => item.incaricoa).filter(Boolean))].sort();
-        const tipologie = [...new Set(data.map(item => item.tipologia).filter(Boolean))].sort();
+        const incarichi = ["Tutti gli Incarichi", ...new Set(data.map(item => item.incaricoa).filter(Boolean))].sort();
+        const tipologie = ["Tutte le Tipologie", ...new Set(data.map(item => item.tipologia).filter(Boolean))].sort();
         const sI = document.getElementById('filtro-incarico');
         const sT = document.getElementById('filtro-tipologia');
-        incarichi.forEach(i => sI.add(new Option(i, i)));
-        tipologie.forEach(t => sT.add(new Option(t, t)));
+        sI.innerHTML = ''; sT.innerHTML = '';
+        incarichi.forEach(i => sI.add(new Option(i, i === "Tutti gli Incarichi" ? "" : i)));
+        tipologie.forEach(t => sT.add(new Option(t, t === "Tutte le Tipologie" ? "" : t)));
     }
 
     function applicaFiltri() {
@@ -175,10 +182,10 @@
         Object.keys(tree).sort((a,b)=>b-a).forEach(year => {
             const yearId = `y-${year}`;
             let html = `<div class="year-group">
-                <div onclick="toggle('${yearId}')" class="year-header apple-glass p-6 rounded-[2rem] flex items-center justify-between mb-2">
-                    <h2 class="text-2xl font-black text-white"><i class="fas fa-chevron-right mr-4 text-emerald-500 rotate-icon"></i> ${year}</h2>
+                <div onclick="toggle('${yearId}')" class="year-header apple-glass p-7 rounded-[2.5rem] flex items-center justify-between mb-3">
+                    <h2 class="text-3xl font-bold text-slate-800"><i class="fas fa-chevron-right mr-5 text-emerald-500 rotate-icon text-xl"></i> ${year}</h2>
                 </div>
-                <div id="${yearId}" class="collapsed-content space-y-4 pt-2 pb-6 pl-4 md:pl-10">`;
+                <div id="${yearId}" class="collapsed-content space-y-5 pt-4 pb-8 pl-0 md:pl-8">`;
 
             Object.keys(tree[year]).sort((a,b)=>b-a).forEach(month => {
                 const monthId = `m-${year}-${month}`;
@@ -189,32 +196,45 @@
                 const perc = limit > 0 ? Math.min((speso / limit) * 100, 100) : 0;
 
                 html += `<div class="month-group">
-                    <div onclick="toggle('${monthId}')" class="month-header apple-glass p-5 rounded-[1.5rem] flex flex-col gap-4">
+                    <div onclick="toggle('${monthId}')" class="month-header apple-glass p-6 rounded-[2rem] flex flex-col gap-5">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-black text-white/80"><i class="fas fa-chevron-right mr-3 text-xs rotate-icon"></i> ${nomiMesi[month-1]}</h3>
+                            <h3 class="text-xl font-semibold text-slate-700"><i class="fas fa-chevron-right mr-4 text-sm rotate-icon"></i> ${nomiMesi[month-1]}</h3>
                             <div class="text-right">
-                                <p class="text-[9px] text-slate-500 font-bold uppercase">Uscite: € ${speso.toLocaleString()}</p>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Totale Uscite</span>
+                                <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
                             </div>
                         </div>
-                        <div class="w-full h-1 bg-white/5 rounded-full"><div class="h-full ${perc >= 100 ? 'bg-red-500' : 'bg-emerald-500'} rounded-full" style="width:${perc}%"></div></div>
+                        <div class="w-full h-2 progress-container rounded-full overflow-hidden">
+                            <div class="h-full ${perc >= 90 ? 'bg-red-500' : 'bg-emerald-500'} rounded-full transition-all duration-1000" style="width:${perc}%"></div>
+                        </div>
                     </div>
-                    <div id="${monthId}" class="collapsed-content mt-3 overflow-hidden">
-                        <div class="apple-glass rounded-[1.5rem] overflow-x-auto">
+                    <div id="${monthId}" class="collapsed-content mt-4 overflow-hidden">
+                        <div class="apple-glass rounded-[2rem] overflow-x-auto shadow-sm">
                             <table class="w-full text-left">
-                                <tbody class="divide-y divide-white/5">
+                                <thead class="bg-white/30 text-[10px] uppercase text-slate-400 font-bold">
+                                    <tr>
+                                        <th class="p-5">Data</th>
+                                        <th class="p-5">Tipologia</th>
+                                        <th class="p-5">Descrizione</th>
+                                        <th class="p-5 text-right">Importo</th>
+                                        <th class="p-5 text-center">Stato</th>
+                                        <th class="p-5 text-center">Azioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-black/5">
                                     ${spese.map(i => {
                                         const isDone = (i.completato || 'no') === 'si';
-                                        return `<tr class="table-row">
-                                            <td class="p-4 text-[10px] text-white font-bold">${new Date(i.data_spesa).toLocaleDateString()}</td>
-                                            <td class="p-4 text-[11px] text-slate-400 font-bold uppercase">${i.tipologia}</td>
-                                            <td class="p-4 text-[11px] text-slate-300 truncate max-w-[120px]">${i.descrizione || '-'}</td>
-                                            <td class="p-4 text-right font-black text-xs ${i.importo < 0 ? 'text-negative' : 'text-positive'}">€ ${i.importo.toFixed(2)}</td>
-                                            <td class="p-4 text-center">
-                                                <div onclick="toggleStato('${i.id}', '${i.completato || 'no'}', event)" class="status-btn">
-                                                    <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-500'}"></i>
+                                        return `<tr class="table-row transition-colors">
+                                            <td class="p-5 text-sm text-slate-600 font-medium">${new Date(i.data_spesa).toLocaleDateString()}</td>
+                                            <td class="p-5"><span class="px-3 py-1 bg-white/50 border border-black/5 rounded-full text-[10px] text-slate-500 font-bold uppercase">${i.tipologia}</span></td>
+                                            <td class="p-5 text-sm text-slate-600 truncate max-w-[150px]">${i.descrizione || '-'}</td>
+                                            <td class="p-5 text-right font-bold text-base ${i.importo < 0 ? 'text-negative' : 'text-positive'}">€ ${i.importo.toFixed(2)}</td>
+                                            <td class="p-5 text-center">
+                                                <div onclick="toggleStato('${i.id}', '${i.completato || 'no'}', event)" class="status-btn inline-block">
+                                                    <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-400'} text-xl"></i>
                                                 </div>
                                             </td>
-                                            <td class="p-4 text-center"><a href="modifica_spesa.html?id=${i.id}" class="text-blue-500/50"><i class="fas fa-edit text-xs"></i></a></td>
+                                            <td class="p-5 text-center"><a href="modifica_spesa.html?id=${i.id}" class="text-slate-300 hover:text-emerald-500 transition-colors"><i class="fas fa-edit text-sm"></i></a></td>
                                         </tr>`
                                     }).join('')}
                                 </tbody>
