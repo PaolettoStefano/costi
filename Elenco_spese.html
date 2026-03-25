@@ -37,6 +37,10 @@
         .year-header:hover { background: rgba(255,255,255,0.05); }
         .month-header { cursor: pointer; transition: background 0.3s; }
         .month-header:hover { background: rgba(255,255,255,0.04); }
+
+        /* Stili per il toggle dello stato */
+        .status-btn { cursor: pointer; transition: all 0.2s; }
+        .status-btn:hover { transform: scale(1.2); }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -99,6 +103,25 @@
             console.error("Errore inizializzazione:", err);
         } finally {
             document.getElementById('loader').classList.add('hidden');
+        }
+    }
+
+    // Funzione per cambiare lo stato direttamente dall'elenco
+    async function toggleStato(id, statoAttuale) {
+        const nuovoStato = statoAttuale === 'si' ? 'no' : 'si';
+        
+        const { error } = await supabaseClient
+            .from('gestione_costi')
+            .update({ completato: nuovoStato })
+            .eq('id', id);
+
+        if (error) {
+            alert("Errore nell'aggiornamento: " + error.message);
+        } else {
+            // Aggiorna localmente i dati per evitare reload totale
+            const index = datiOriginali.findIndex(d => d.id === id);
+            if (index !== -1) datiOriginali[index].completato = nuovoStato;
+            applicaFiltri(); 
         }
     }
 
@@ -203,19 +226,27 @@
                                             <th class="p-4 text-[9px] font-black uppercase text-slate-500">Tipo</th>
                                             <th class="p-4 text-[9px] font-black uppercase text-slate-500">Descrizione</th>
                                             <th class="p-4 text-[9px] font-black uppercase text-slate-500 text-right">Importo</th>
+                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500 text-center">Stato</th>
                                             <th class="p-4 text-[9px] font-black uppercase text-slate-500 text-center">Edit</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-white/5">
-                                        ${speseMese.map(i => `
+                                        ${speseMese.map(i => {
+                                            const isDone = (i.completato || 'no').toLowerCase() === 'si';
+                                            return `
                                             <tr class="table-row transition-colors">
                                                 <td class="p-4 text-[10px] font-bold text-white">${new Date(i.data_spesa).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'})}</td>
                                                 <td class="p-4"><span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[8px] text-emerald-400 font-black uppercase">${i.tipologia}</span></td>
                                                 <td class="p-4 text-[11px] text-slate-400 truncate max-w-[120px] md:max-w-xs">${i.descrizione || '-'}</td>
                                                 <td class="p-4 text-right font-black text-xs ${i.importo < 0 ? 'text-negative' : 'text-positive'}">€ ${parseFloat(i.importo).toFixed(2)}</td>
+                                                <td class="p-4 text-center">
+                                                    <span onclick="toggleStato('${i.id}', '${i.completato || 'no'}')" class="status-btn">
+                                                        <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-500'} text-sm"></i>
+                                                    </span>
+                                                </td>
                                                 <td class="p-4 text-center"><a href="modifica_spesa.html?id=${i.id}" class="text-blue-500/50 hover:text-blue-400 transition-colors"><i class="fas fa-edit text-xs"></i></a></td>
                                             </tr>
-                                        `).join('')}
+                                        `}).join('')}
                                     </tbody>
                                 </table>
                             </div>
@@ -230,7 +261,7 @@
     }
 
     function exportToExcel() {
-        const rows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo }));
+        const rows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo, Completato: i.completato }));
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Spese");
