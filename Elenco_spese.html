@@ -38,9 +38,8 @@
         .month-header { cursor: pointer; transition: background 0.3s; }
         .month-header:hover { background: rgba(255,255,255,0.04); }
 
-        .status-btn { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
-        .status-btn i { transition: all 0.2s ease; }
-        .status-btn:active i { transform: scale(0.8); }
+        .status-btn { cursor: pointer; padding: 5px; border-radius: 8px; transition: background 0.2s; }
+        .status-btn:hover { background: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -103,35 +102,34 @@
         }
     }
 
-    // MODIFICA QUI: Aggiornamento UI istantaneo senza ricaricare l'accordion
-    async function toggleStato(id, currentVal, btnElement) {
-        event.stopPropagation();
+    // FUNZIONE AGGIORNATA: Più robusta e non ricarica la pagina
+    async function toggleStato(id, currentVal, event) {
+        if(event) event.stopPropagation(); // Ferma la chiusura della riga
+        
         const nuovoStato = currentVal === 'si' ? 'no' : 'si';
+        const btnElement = document.querySelector(`[data-id="${id}"]`);
         
-        // Cambio immediato dell'icona (UI)
-        const icon = btnElement.querySelector('i');
-        if (nuovoStato === 'si') {
-            icon.className = 'fas fa-check-circle text-emerald-500 text-sm';
-        } else {
-            icon.className = 'fas fa-times-circle text-red-500 text-sm';
+        // 1. Feedback Visivo Immediato
+        if (btnElement) {
+            const icon = btnElement.querySelector('i');
+            icon.className = nuovoStato === 'si' ? 'fas fa-check-circle text-emerald-500' : 'fas fa-times-circle text-red-500';
+            // Aggiorna l'onclick per il prossimo clic
+            btnElement.setAttribute('onclick', `toggleStato('${id}', '${nuovoStato}', event)`);
         }
-        
-        // Aggiorna attributo per il prossimo clic
-        btnElement.setAttribute('onclick', `toggleStato('${id}', '${nuovoStato}', this)`);
 
-        // Aggiorna Database in background
+        // 2. Aggiorna DB
         const { error } = await supabaseClient
             .from('gestione_costi')
             .update({ completato: nuovoStato })
             .eq('id', id);
 
         if (error) {
-            alert("Errore salvataggio: " + error.message);
-            init(); // Solo in caso di errore ricarichiamo tutto per sicurezza
+            console.error("Errore Supabase:", error);
+            alert("Errore nel salvataggio. Ricarica la pagina.");
         } else {
-            // Aggiorna silenziosamente il dato locale per l'export Excel
-            const index = datiOriginali.findIndex(d => d.id === id);
-            if (index !== -1) datiOriginali[index].completato = nuovoStato;
+            // Aggiorna array locale per export
+            const item = datiOriginali.find(d => d.id == id);
+            if(item) item.completato = nuovoStato;
         }
     }
 
@@ -178,7 +176,7 @@
                 <div class="year-group">
                     <div onclick="toggle('${yearId}')" class="year-header apple-glass p-6 rounded-[2rem] flex items-center justify-between mb-2">
                         <h2 class="text-2xl font-black text-white"><i class="fas fa-chevron-right mr-4 text-emerald-500 rotate-icon"></i> ${year}</h2>
-                        <span class="text-[10px] font-black uppercase text-slate-500 tracking-widest">${Object.keys(tree[year]).length} mesi con attività</span>
+                        <span class="text-[10px] font-black uppercase text-slate-500 tracking-widest">${Object.keys(tree[year]).length} mesi</span>
                     </div>
                     <div id="${yearId}" class="collapsed-content space-y-4 pt-2 pb-6 pl-4 md:pl-10">
             `;
@@ -198,54 +196,34 @@
                                 <h3 class="text-lg font-black text-white/80"><i class="fas fa-chevron-right mr-3 text-[10px] text-slate-500 rotate-icon"></i> ${nomiMesi[month-1]}</h3>
                                 <div class="flex items-center gap-6">
                                     <div class="text-right">
-                                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Totale Uscite</p>
-                                        <p class="text-sm font-black text-white">€ ${spesoReale.toLocaleString('it-IT', {minimumFractionDigits:2})}</p>
+                                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Uscite</p>
+                                        <p class="text-sm font-black text-white">€ ${spesoReale.toLocaleString('it-IT')}</p>
                                     </div>
-                                    <a href="gestione_budget.html?mese=${month}&anno=${year}" onclick="event.stopPropagation()" class="bg-white/5 hover:bg-emerald-500/20 p-2 rounded-lg transition-colors group">
-                                        <i class="fas fa-cog text-slate-500 group-hover:text-emerald-400 text-xs"></i>
-                                    </a>
+                                    <a href="gestione_budget.html?mese=${month}&anno=${year}" onclick="event.stopPropagation()" class="p-2 bg-white/5 rounded-lg hover:bg-emerald-500/20"><i class="fas fa-cog text-slate-500 text-xs"></i></a>
                                 </div>
                             </div>
-                            <div class="w-full">
-                                <div class="flex justify-between items-center mb-1.5">
-                                    <span class="text-[9px] font-black uppercase ${perc >= 100 ? 'text-red-500' : 'text-emerald-500'}">
-                                        ${budgetLimit > 0 ? perc.toFixed(0) + '% del budget' : 'Budget non impostato'}
-                                    </span>
-                                    <span class="text-[9px] font-bold text-slate-500">${budgetLimit > 0 ? 'Rimanente: € ' + (budgetLimit - spesoReale).toFixed(2) : ''}</span>
-                                </div>
-                                <div class="w-full h-1.5 progress-container rounded-full overflow-hidden">
-                                    <div class="h-full progress-fill ${perc >= 100 ? 'bg-red-600 animate-pulse' : (perc > 80 ? 'bg-orange-500' : 'bg-emerald-500')}" style="width: ${perc}%"></div>
-                                </div>
+                            <div class="w-full h-1 progress-container rounded-full overflow-hidden">
+                                <div class="h-full progress-fill ${perc >= 100 ? 'bg-red-500' : 'bg-emerald-500'}" style="width: ${perc}%"></div>
                             </div>
                         </div>
                         <div id="${monthId}" class="collapsed-content mt-3 overflow-hidden">
                             <div class="apple-glass rounded-[1.5rem] overflow-x-auto">
                                 <table class="w-full text-left">
-                                    <thead class="bg-white/5 border-b border-white/5">
-                                        <tr>
-                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500">Data</th>
-                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500">Tipo</th>
-                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500">Descrizione</th>
-                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500 text-right">Importo</th>
-                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500 text-center">Stato</th>
-                                            <th class="p-4 text-[9px] font-black uppercase text-slate-500 text-center">Edit</th>
-                                        </tr>
-                                    </thead>
                                     <tbody class="divide-y divide-white/5">
                                         ${speseMese.map(i => {
                                             const isDone = (i.completato || 'no').toLowerCase() === 'si';
                                             return `
-                                            <tr class="table-row transition-colors">
-                                                <td class="p-4 text-[10px] font-bold text-white">${new Date(i.data_spesa).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'})}</td>
+                                            <tr class="table-row">
+                                                <td class="p-4 text-[10px] font-bold text-white">${new Date(i.data_spesa).toLocaleDateString('it-IT')}</td>
                                                 <td class="p-4"><span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[8px] text-emerald-400 font-black uppercase">${i.tipologia}</span></td>
-                                                <td class="p-4 text-[11px] text-slate-400 truncate max-w-[120px] md:max-w-xs">${i.descrizione || '-'}</td>
+                                                <td class="p-4 text-[11px] text-slate-400 truncate max-w-[100px]">${i.descrizione || '-'}</td>
                                                 <td class="p-4 text-right font-black text-xs ${i.importo < 0 ? 'text-negative' : 'text-positive'}">€ ${parseFloat(i.importo).toFixed(2)}</td>
                                                 <td class="p-4 text-center">
-                                                    <span onclick="toggleStato('${i.id}', '${i.completato || 'no'}', this)" class="status-btn">
-                                                        <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-500'} text-sm"></i>
+                                                    <span data-id="${i.id}" onclick="toggleStato('${i.id}', '${i.completato || 'no'}', event)" class="status-btn">
+                                                        <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-500'}"></i>
                                                     </span>
                                                 </td>
-                                                <td class="p-4 text-center"><a href="modifica_spesa.html?id=${i.id}" class="text-blue-500/50 hover:text-blue-400 transition-colors"><i class="fas fa-edit text-xs"></i></a></td>
+                                                <td class="p-4 text-center"><a href="modifica_spesa.html?id=${i.id}" class="text-blue-500/50 hover:text-blue-400"><i class="fas fa-edit text-xs"></i></a></td>
                                             </tr>
                                         `}).join('')}
                                     </tbody>
