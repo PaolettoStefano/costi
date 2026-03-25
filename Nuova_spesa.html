@@ -28,6 +28,19 @@
         input:focus, select:focus { border-color: #10b981 !important; outline: none; }
         option { background: #0f172a; color: white; }
         .btn-loading { pointer-events: none; opacity: 0.6; }
+
+        /* Stile per il toggle completato */
+        .status-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+            padding: 12px;
+            border-radius: 16px;
+            transition: background 0.3s;
+        }
+        .status-toggle:hover { background: rgba(255,255,255,0.05); }
     </style>
 </head>
 <body class="p-6">
@@ -44,18 +57,19 @@
                 <input type="date" id="data_spesa" required class="w-full p-4 rounded-2xl text-sm">
             </div>
 
-            <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Incarico</label>
-                <select id="incaricoa" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
-                    <option value="" disabled selected>Caricamento incarichi...</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tipologia</label>
-                <select id="tipologia" onchange="aggiornaColoreImporto()" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
-                    <option value="" disabled selected>Caricamento categorie...</option>
-                </select>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Incarico</label>
+                    <select id="incaricoa" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
+                        <option value="" disabled selected>Caricamento...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tipologia</label>
+                    <select id="tipologia" onchange="aggiornaColoreImporto()" required class="w-full p-4 rounded-2xl text-sm cursor-pointer">
+                        <option value="" disabled selected>Caricamento...</option>
+                    </select>
+                </div>
             </div>
 
             <div>
@@ -69,7 +83,21 @@
                 <p id="info-segno" class="text-[9px] text-slate-500 mt-2 ml-1 uppercase font-bold italic">Seleziona una categoria</p>
             </div>
 
-            <div class="flex flex-col gap-3 pt-2">
+            <div class="pt-2">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Stato Pagamento</label>
+                <div onclick="toggleStatusUI()" class="status-toggle border border-white/10 bg-white/5">
+                    <div id="status-icon-container" class="w-10 h-10 rounded-full flex items-center justify-center bg-red-500/20">
+                        <i id="status-icon" class="fas fa-times text-red-500"></i>
+                    </div>
+                    <div>
+                        <p id="status-text" class="text-xs font-black uppercase tracking-tight text-red-500">Non Completato</p>
+                        <p class="text-[9px] text-slate-500 font-bold uppercase">Clicca per cambiare</p>
+                    </div>
+                    <input type="hidden" id="completato_val" value="no">
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 pt-4">
                 <button type="button" onclick="saveData(true)" id="btn-save-new" class="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-4 rounded-2xl uppercase tracking-widest text-[10px] border border-white/10">
                     Salva e Aggiungi Altra
                 </button>
@@ -94,56 +122,55 @@
     document.getElementById('data_spesa').valueAsDate = new Date();
 
     async function loadInitialData() {
-        // Carichiamo entrambe le tabelle all'avvio
         await Promise.all([loadTipologie(), loadIncarichi()]);
+    }
+
+    // Gestione visiva del nuovo campo completato
+    function toggleStatusUI() {
+        const valInput = document.getElementById('completato_val');
+        const iconContainer = document.getElementById('status-icon-container');
+        const icon = document.getElementById('status-icon');
+        const text = document.getElementById('status-text');
+
+        if (valInput.value === 'no') {
+            valInput.value = 'si';
+            iconContainer.classList.replace('bg-red-500/20', 'bg-emerald-500/20');
+            icon.className = 'fas fa-check text-emerald-500';
+            text.innerText = 'Completato';
+            text.classList.replace('text-red-500', 'text-emerald-500');
+        } else {
+            valInput.value = 'no';
+            iconContainer.classList.replace('bg-emerald-500/20', 'bg-red-500/20');
+            icon.className = 'fas fa-times text-red-500';
+            text.innerText = 'Non Completato';
+            text.classList.replace('text-emerald-500', 'text-red-500');
+        }
     }
 
     async function loadTipologie() {
         try {
-            const { data, error } = await supabaseClient
-                .from('tipologia_spesa')
-                .select('descrizione, segno')
-                .order('descrizione', { ascending: true });
-
+            const { data, error } = await supabaseClient.from('tipologia_spesa').select('descrizione, segno').order('descrizione');
             if (error) throw error;
-
             const select = document.getElementById('tipologia');
-            select.innerHTML = '<option value="" disabled selected>Seleziona categoria</option>';
-            
+            select.innerHTML = '<option value="" disabled selected>Categoria</option>';
             data.forEach(tipo => {
                 mappaSegni[tipo.descrizione] = Number(tipo.segno);
-                const opt = document.createElement('option');
-                opt.value = tipo.descrizione;
-                opt.textContent = tipo.descrizione;
-                select.appendChild(opt);
+                const opt = new Option(tipo.descrizione, tipo.descrizione);
+                select.add(opt);
             });
-        } catch (err) { console.error("Errore tipologie:", err); }
+        } catch (err) { console.error(err); }
     }
 
     async function loadIncarichi() {
         const select = document.getElementById('incaricoa');
         try {
-            const { data, error } = await supabaseClient
-                .from('in_carico') // NOME TABELLA CORRETTO: in_carico
-                .select('incaricoa') 
-                .order('incaricoa', { ascending: true });
-
+            const { data, error } = await supabaseClient.from('in_carico').select('incaricoa').order('incaricoa');
             if (error) throw error;
-
-            select.innerHTML = '<option value="" disabled selected>Seleziona incarico</option>';
-            
+            select.innerHTML = '<option value="" disabled selected>Incarico</option>';
             data.forEach(item => {
-                if (item.incaricoa) {
-                    const opt = document.createElement('option');
-                    opt.value = item.incaricoa;
-                    opt.textContent = item.incaricoa;
-                    select.appendChild(opt);
-                }
+                if (item.incaricoa) select.add(new Option(item.incaricoa, item.incaricoa));
             });
-        } catch (err) { 
-            console.error("Errore incarichi:", err); 
-            select.innerHTML = '<option value="" disabled selected>Errore caricamento</option>';
-        }
+        } catch (err) { console.error(err); }
     }
 
     function aggiornaColoreImporto() {
@@ -166,26 +193,21 @@
     }
 
     async function saveData(keepOpening) {
-        const btnNew = document.getElementById('btn-save-new');
-        const btnExit = document.getElementById('btn-save-exit');
         const fields = {
             desc: document.getElementById('descrizione'),
             imp: document.getElementById('importo'),
             data: document.getElementById('data_spesa'),
             tipo: document.getElementById('tipologia'),
-            inc: document.getElementById('incaricoa') 
+            inc: document.getElementById('incaricoa'),
+            comp: document.getElementById('completato_val')
         };
 
         if(!fields.desc.value || !fields.imp.value || !fields.tipo.value || !fields.inc.value) {
-            alert("Compila tutti i campi, incluso l'incarico!"); return;
+            alert("Compila tutti i campi!"); return;
         }
 
-        btnNew.classList.add('btn-loading');
-        btnExit.classList.add('btn-loading');
-
         const valoreInserito = parseFloat(fields.imp.value);
-        const moltiplicatore = mappaSegni[fields.tipo.value] || -1;
-        const importoFinale = valoreInserito * moltiplicatore;
+        const importoFinale = valoreInserito * (mappaSegni[fields.tipo.value] || -1);
 
         try {
             const { error } = await supabaseClient.from('gestione_costi').insert([{
@@ -193,7 +215,8 @@
                 descrizione: fields.desc.value,
                 importo: importoFinale,
                 tipologia: fields.tipo.value,
-                incaricoa: fields.inc.value // Salva nella colonna incaricoa
+                incaricoa: fields.inc.value,
+                completato: fields.comp.value // INVIO DEL NUOVO CAMPO
             }]);
 
             if (error) throw error;
@@ -204,16 +227,12 @@
                 fields.tipo.selectedIndex = 0; fields.inc.selectedIndex = 0;
                 fields.imp.classList.remove('text-emerald-400', 'text-red-400');
                 fields.imp.classList.add('text-white');
-                document.getElementById('info-segno').innerText = "Seleziona una categoria";
+                // Reset toggle UI
+                if(fields.comp.value === 'si') toggleStatusUI(); 
             } else {
                 setTimeout(() => window.location.href = 'Elenco_spese.html', 800);
             }
-        } catch (err) {
-            alert("Errore salvataggio: " + err.message);
-        } finally {
-            btnNew.classList.remove('btn-loading');
-            btnExit.classList.remove('btn-loading');
-        }
+        } catch (err) { alert(err.message); }
     }
 
     function showToast() {
