@@ -222,27 +222,35 @@
                 const budgetRow = datiBudget.find(b => b.anno == year && b.mese == month);
                 const limit = budgetRow ? parseFloat(budgetRow.importo_budget) : 0;
                 const speso = spese.filter(i => i.importo < 0).reduce((acc, i) => acc + Math.abs(i.importo), 0);
-                const perc = limit > 0 ? Math.min((speso / limit) * 100, 100) : 0;
+                const rimanente = limit - speso;
+                const perc = limit > 0 ? (speso / limit) * 100 : 0;
 
-                // NUOVA LOGICA COLORE BARRA
-                let colorClass = 'bg-emerald-500'; // Verde default
+                // Logica Colore Barra Dinamica
+                let colorClass = 'bg-emerald-500';
                 if (perc >= 90) {
-                    colorClass = 'bg-red-500';     // Rosso sopra 90%
+                    colorClass = 'bg-red-500';
                 } else if (perc >= 70) {
-                    colorClass = 'bg-amber-400';   // Giallo/Ambra tra 70% e 90%
+                    colorClass = 'bg-amber-400';
                 }
 
                 html += `<div class="month-group">
                     <div onclick="toggle('${monthId}')" class="month-header apple-glass p-6 rounded-[2rem] flex flex-col gap-5">
                         <div class="flex items-center justify-between">
                             <h3 class="text-xl font-semibold text-slate-700"><i class="fas fa-chevron-right mr-4 text-sm rotate-icon"></i> ${nomiMesi[month-1]}</h3>
-                            <div class="text-right">
-                                <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite nel periodo</span>
-                                <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
+                            <div class="flex gap-8 text-right">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite</span>
+                                    <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
+                                </div>
+                                ${limit > 0 ? `
+                                <div>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Rimanente</span>
+                                    <p class="text-lg font-bold ${rimanente < 0 ? 'text-red-500' : 'text-emerald-600'}">€ ${rimanente.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
+                                </div>` : ''}
                             </div>
                         </div>
                         <div class="w-full h-2 progress-container rounded-full overflow-hidden">
-                            <div class="h-full ${colorClass} rounded-full transition-all duration-1000" style="width:${perc}%"></div>
+                            <div class="h-full ${colorClass} rounded-full transition-all duration-1000" style="width:${Math.min(perc, 100)}%"></div>
                         </div>
                     </div>
                     <div id="${monthId}" class="collapsed-content mt-4 overflow-hidden">
