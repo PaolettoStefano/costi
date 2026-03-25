@@ -38,8 +38,8 @@
         .month-header { cursor: pointer; transition: background 0.3s; }
         .month-header:hover { background: rgba(255,255,255,0.04); }
 
-        .status-btn { cursor: pointer; padding: 5px; border-radius: 8px; transition: background 0.2s; }
-        .status-btn:hover { background: rgba(255,255,255,0.1); }
+        .status-btn { cursor: pointer; padding: 10px; border-radius: 12px; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+        .status-btn:hover { background: rgba(255,255,255,0.15); transform: scale(1.1); }
     </style>
 </head>
 <body class="p-4 md:p-12">
@@ -102,34 +102,38 @@
         }
     }
 
-    // FUNZIONE AGGIORNATA: Più robusta e non ricarica la pagina
     async function toggleStato(id, currentVal, event) {
-        if(event) event.stopPropagation(); // Ferma la chiusura della riga
+        if(event) event.stopPropagation();
         
+        // Calcoliamo il nuovo stato
         const nuovoStato = currentVal === 'si' ? 'no' : 'si';
-        const btnElement = document.querySelector(`[data-id="${id}"]`);
         
-        // 1. Feedback Visivo Immediato
+        // 1. Cerchiamo l'elemento nel DOM
+        const btnElement = document.querySelector(`span[data-id="${id}"]`);
+        
         if (btnElement) {
             const icon = btnElement.querySelector('i');
+            // Feedback visivo immediato
             icon.className = nuovoStato === 'si' ? 'fas fa-check-circle text-emerald-500' : 'fas fa-times-circle text-red-500';
-            // Aggiorna l'onclick per il prossimo clic
+            // Aggiorniamo l'attributo per il prossimo click
             btnElement.setAttribute('onclick', `toggleStato('${id}', '${nuovoStato}', event)`);
         }
 
-        // 2. Aggiorna DB
+        // 2. Sincronizziamo l'array locale (fondamentale per i filtri e l'export)
+        const itemIndex = datiOriginali.findIndex(d => d.id == id);
+        if (itemIndex !== -1) {
+            datiOriginali[itemIndex].completato = nuovoStato;
+        }
+
+        // 3. Aggiorniamo Supabase
         const { error } = await supabaseClient
             .from('gestione_costi')
             .update({ completato: nuovoStato })
             .eq('id', id);
 
         if (error) {
-            console.error("Errore Supabase:", error);
-            alert("Errore nel salvataggio. Ricarica la pagina.");
-        } else {
-            // Aggiorna array locale per export
-            const item = datiOriginali.find(d => d.id == id);
-            if(item) item.completato = nuovoStato;
+            console.error("Errore database:", error);
+            alert("Errore nel salvataggio sul cloud.");
         }
     }
 
@@ -151,6 +155,7 @@
 
     function toggle(id) {
         const el = document.getElementById(id);
+        if(!el) return;
         const header = el.previousElementSibling;
         el.classList.toggle('collapsed-content');
         header.classList.toggle('is-open');
