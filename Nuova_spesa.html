@@ -59,6 +59,10 @@
 
         .text-negative { color: #dc2626 !important; }
         .text-positive { color: #059669 !important; }
+        
+        /* Animazione per nascondere lo stato */
+        #container-stato { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
+        .hidden-field { opacity: 0; max-height: 0; margin-top: 0 !important; pointer-events: none; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -72,7 +76,8 @@
             <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Nuovo <span class="text-emerald-600">Movimento</span></h1>
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Registrazione Spesa o Entrata</p>
         </div>
-        <div class="w-6"></div> </div>
+        <div class="w-6"></div> 
+    </div>
 
     <div class="apple-glass p-6 md:p-10 rounded-[2.5rem]">
         <form id="form-spesa" class="space-y-6">
@@ -84,14 +89,14 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Incarico a</label>
-                    <select id="incaricoa" required class="w-full p-4 text-sm cursor-pointer">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Tipologia</label>
+                    <select id="tipologia" onchange="gestisciTipoPrelievo()" required class="w-full p-4 text-sm cursor-pointer">
                         <option value="" disabled selected>Caricamento...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Tipologia</label>
-                    <select id="tipologia" onchange="aggiornaColoreImporto()" required class="w-full p-4 text-sm cursor-pointer">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Incarico a</label>
+                    <select id="incaricoa" required class="w-full p-4 text-sm cursor-pointer">
                         <option value="" disabled selected>Caricamento...</option>
                     </select>
                 </div>
@@ -108,7 +113,7 @@
                 <p id="info-segno" class="text-[10px] text-slate-400 mt-2 ml-2 uppercase font-bold">Seleziona una categoria per vedere il segno</p>
             </div>
 
-            <div>
+            <div id="container-stato">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-2">Stato Pagamento</label>
                 <div onclick="toggleStatusUI()" class="status-toggle">
                     <div id="status-icon-container" class="w-12 h-12 rounded-2xl flex items-center justify-center bg-red-100">
@@ -150,6 +155,23 @@
 
     async function loadInitialData() {
         await Promise.all([loadTipologie(), loadIncarichi()]);
+    }
+
+    // Funzione per gestire la visibilità dello stato basata sulla tipologia
+    function gestisciTipoPrelievo() {
+        const tipoSelect = document.getElementById('tipologia');
+        const containerStato = document.getElementById('container-stato');
+        const valCompletato = document.getElementById('completato_val');
+        
+        // Chiamiamo anche la funzione originale per i colori
+        aggiornaColoreImporto();
+
+        if (tipoSelect.value === "Prelievo Bancario") {
+            containerStato.classList.add('hidden-field');
+            valCompletato.value = "si"; // Di default i prelievi sono considerati chiusi
+        } else {
+            containerStato.classList.remove('hidden-field');
+        }
     }
 
     function toggleStatusUI() {
@@ -249,8 +271,11 @@
             if (keepOpening) {
                 fields.desc.value = ''; fields.imp.value = ''; 
                 fields.tipo.selectedIndex = 0; fields.inc.selectedIndex = 0;
-                inputImp = document.getElementById('importo');
-                inputImp.className = "w-full p-5 text-2xl font-black transition-colors duration-300";
+                const inputImp = document.getElementById('importo');
+                inputImp.className = "w-full p-5 text-2xl font-black transition-colors duration-300 text-slate-800";
+                document.getElementById('info-segno').innerText = "Seleziona una categoria per vedere il segno";
+                document.getElementById('info-segno').className = "text-[10px] text-slate-400 mt-2 ml-2 uppercase font-bold";
+                document.getElementById('container-stato').classList.remove('hidden-field');
                 if(fields.comp.value === 'si') toggleStatusUI(); 
             } else {
                 setTimeout(() => window.location.href = 'Elenco_spese.html', 800);
