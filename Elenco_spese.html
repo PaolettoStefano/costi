@@ -223,12 +223,10 @@
                 const budgetRow = datiBudget.find(b => b.anno == year && b.mese == month);
                 const limit = budgetRow ? parseFloat(budgetRow.importo_budget) : 0;
                 
-                // --- LOGICA DI FILTRO AVANZATA PER IL CONTEGGIO ---
                 const speso = spese
                     .filter(i => {
                         const desc = (i.descrizione || "").toLowerCase().trim();
                         const tipo = (i.tipologia || "").toLowerCase().trim();
-                        // Se è un'uscita (negativo) E NON è un prelievo bancario
                         return i.importo < 0 && 
                                desc !== "prelievo bancario" && 
                                tipo !== "prelievo bancario";
@@ -251,12 +249,12 @@
                             <h3 class="text-xl font-semibold text-slate-700"><i class="fas fa-chevron-right mr-4 text-sm rotate-icon"></i> ${nomiMesi[month-1]}</h3>
                             <div class="flex gap-8 text-right">
                                 <div>
-                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite Conteggiate</span>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite</span>
                                     <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
                                 </div>
                                 ${limit > 0 ? `
                                 <div>
-                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Budget Rimanente</span>
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Rimanente</span>
                                     <p class="text-lg font-bold ${rimanente < 0 ? 'text-red-500' : 'text-emerald-600'}">€ ${rimanente.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
                                 </div>` : ''}
                             </div>
@@ -282,27 +280,27 @@
                                 <tbody class="divide-y divide-black/5">
                                     ${spese.map(i => {
                                         const isDone = (i.completato || 'no') === 'si';
-                                        
-                                        // Controllo se è un prelievo per lo stile visivo
                                         const descRaw = (i.descrizione || "").toLowerCase().trim();
                                         const tipoRaw = (i.tipologia || "").toLowerCase().trim();
                                         const isPrelievo = descRaw === "prelievo bancario" || tipoRaw === "prelievo bancario";
                                         
-                                        return `<tr class="table-row transition-colors ${isPrelievo ? 'bg-slate-100/30' : ''}">
+                                        return `<tr class="table-row transition-colors ${isPrelievo ? 'bg-amber-50/50 border-l-4 border-amber-400' : ''}">
                                             <td class="p-5 text-sm text-slate-600 font-medium">${new Date(i.data_spesa).toLocaleDateString()}</td>
                                             <td class="p-5 text-sm text-slate-900 font-bold">${i.incaricoa || '-'}</td>
                                             <td class="p-5"><span class="px-3 py-1 bg-white/50 border border-black/5 rounded-full text-[10px] text-slate-500 font-bold uppercase">${i.tipologia}</span></td>
                                             <td class="p-5 text-sm text-slate-600 truncate max-w-[150px]">
                                                 ${i.descrizione || '-'} 
-                                                ${isPrelievo ? '<span class="ml-2 text-[9px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase">Non Conteggiato</span>' : ''}
+                                                ${isPrelievo ? '<span class="ml-2 text-[8px] bg-amber-200 text-amber-700 px-2 py-0.5 rounded-md font-extrabold uppercase">Escluso dal calcolo</span>' : ''}
                                             </td>
-                                            <td class="p-5 text-right font-bold text-base ${isPrelievo ? 'text-slate-400' : (i.importo < 0 ? 'text-negative' : 'text-positive')}">
+                                            <td class="p-5 text-right font-bold text-base ${isPrelievo ? 'text-slate-600' : (i.importo < 0 ? 'text-negative' : 'text-positive')}">
                                                 € ${i.importo.toFixed(2)}
                                             </td>
                                             <td class="p-5 text-center">
+                                                ${!isPrelievo ? `
                                                 <div onclick="toggleStato('${i.id}', '${i.completato || 'no'}', event)" class="status-btn inline-block">
                                                     <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-400'} text-xl"></i>
                                                 </div>
+                                                ` : ''}
                                             </td>
                                             <td class="p-5 text-center"><a href="modifica_spesa.html?id=${i.id}" class="text-slate-300 hover:text-emerald-500 transition-colors"><i class="fas fa-edit text-sm"></i></a></td>
                                         </tr>`
