@@ -1,332 +1,139 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Costi | Elenco Strutturato</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            color: #1e293b; 
-            min-height: 100vh;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestione Costi | Elenco Strutturato</title>
 
-        .apple-glass {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
-        }
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-        .progress-container { background: rgba(0, 0, 0, 0.05); border: 1px solid rgba(255,255,255,0.3); }
-
-        .table-row:hover { background: rgba(255, 255, 255, 0.5); }
-        .text-positive { color: #059669 !important; }
-        .text-negative { color: #dc2626 !important; }
-
-        .collapsed-content { display: none; }
-        .rotate-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        .is-open .rotate-icon { transform: rotate(90deg); }
-        
-        .year-header, .month-header { cursor: pointer; transition: all 0.3s ease; }
-        .year-header:hover, .month-header:hover { background: rgba(255,255,255,0.7); transform: translateY(-1px); }
-
-        .status-btn { cursor: pointer; padding: 10px; border-radius: 12px; transition: all 0.2s; }
-        .loading-spin { animation: spin 1s linear infinite; opacity: 0.5; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        select {
-            background: rgba(255, 255, 255, 0.5) !important;
-            border: 1px solid rgba(255, 255, 255, 0.7) !important;
-            border-radius: 1rem !important;
-            padding: 0.75rem 1rem !important;
-            font-size: 0.875rem !important;
-            color: #1e293b !important;
-            outline: none !important;
-            transition: all 0.2s;
-        }
-        select:focus { border-color: #10b981 !important; background: white !important; }
-    </style>
+<style>
+body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg,#f5f7fa,#c3cfe2); }
+.apple-glass { background: rgba(255,255,255,0.4); backdrop-filter: blur(20px); border-radius: 2rem; }
+.table-row:hover { background: rgba(255,255,255,0.5); }
+.text-negative { color:#dc2626; }
+.text-positive { color:#059669; }
+.collapsed-content { display:none; }
+.rotate-icon { transition:0.3s; }
+.is-open .rotate-icon { transform:rotate(90deg); }
+</style>
 </head>
-<body class="p-6 md:p-12">
 
-<div class="max-w-6xl mx-auto">
-    <div class="flex flex-col md:flex-row items-center justify-between mb-10 gap-6">
-        <div>
-            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">Archivio <span class="text-emerald-600">Costi</span></h1>
-            <p class="text-slate-500 text-sm font-medium uppercase tracking-wider mt-1">Controllo Spese & Budgeting</p>
-        </div>
-        <div class="flex flex-wrap justify-center gap-4">
-            <button onclick="exportToExcel()" class="bg-white/60 hover:bg-white text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase transition-all shadow-sm border border-white/50 flex items-center">
-                <i class="fas fa-file-excel mr-2 text-green-600"></i> Export
-            </button>
-            <a href="Nuova_spesa.html" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase transition-all shadow-md shadow-emerald-200 flex items-center">
-                <i class="fas fa-plus mr-2"></i> Aggiungi
-            </a>
-        </div>
-    </div>
+<body class="p-6">
 
-    <div class="apple-glass p-6 rounded-[2rem] mb-10 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-        <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-2 block">Incarico</label>
-            <select id="filter-incarico" onchange="applicaFiltri()" class="w-full">
-                <option value="">Seleziona...</option>
-            </select>
-        </div>
-        <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-2 block">Tipologia</label>
-            <select id="filter-tipologia" onchange="applicaFiltri()" class="w-full">
-                <option value="">Seleziona...</option>
-            </select>
-        </div>
-        <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-2 block">Stato Pagamento</label>
-            <select id="filter-stato" onchange="applicaFiltri()" class="w-full">
-                <option value="">Seleziona...</option>
-                <option value="si">Completato (Sì)</option>
-                <option value="no">In sospeso (No)</option>
-            </select>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="resetFiltri()" class="w-full bg-slate-200/50 hover:bg-slate-200 text-slate-600 py-3 rounded-2xl text-[10px] font-bold uppercase transition-all">
-                Reset
-            </button>
-        </div>
-    </div>
-
-    <div id="accordion-container" class="space-y-8"></div>
-    <div id="loader" class="flex justify-center mt-20"><div class="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div></div>
-</div>
+<div id="accordion-container"></div>
 
 <script>
-    const SB_URL = 'https://wleaywzitgcenbhumhov.supabase.co'; 
-    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZWF5d3ppdGdjZW5iaHVtaG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjExNzAsImV4cCI6MjA4OTc5NzE3MH0.d2RR17hiqtD-8wJ81DT9zlWgqcMFasW6fpvO25pSwfQ';
-    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+const SB_URL = 'https://wleaywzitgcenbhumhov.supabase.co'; 
+const SB_KEY = 'YOUR_KEY';
+const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-    let datiOriginali = [];
-    let datiBudget = [];
-    const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+let datiOriginali = [];
+const nomiMesi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 
-    async function init() {
-        try {
-            const [resCosti, resBudget] = await Promise.all([
-                supabaseClient.from('gestione_costi').select('*').order('data_spesa', { ascending: false }),
-                supabaseClient.from('configurazione_budget').select('*')
-            ]);
-            datiOriginali = resCosti.data || [];
-            datiBudget = resBudget.data || [];
-            
-            popolaTendine(datiOriginali);
-            renderAccordion(datiOriginali);
-        } catch (err) { console.error(err); }
-        finally { document.getElementById('loader').classList.add('hidden'); }
+async function init(){
+    const { data } = await supabaseClient.from('gestione_costi').select('*');
+    datiOriginali = data || [];
+    renderAccordion(datiOriginali);
+}
+
+function isPrelievo(item){
+    const d = (item.descrizione || "").toLowerCase();
+    const t = (item.tipologia || "").toLowerCase();
+    return d.includes("prelievo") || t.includes("prelievo");
+}
+
+function toggle(id){
+    const el = document.getElementById(id);
+    el.classList.toggle("collapsed-content");
+    el.previousElementSibling.classList.toggle("is-open");
+}
+
+function vaiAModifica(id, event){
+    if(event){
+        event.preventDefault();
+        event.stopPropagation();
     }
+    // FIX NAVIGAZIONE
+    window.location.href = "modifica_spesa.html?id=" + id;
+}
 
-    function popolaTendine(data) {
-        const incarichi = [...new Set(data.map(i => i.incaricoa).filter(Boolean))].sort();
-        const tipologie = [...new Set(data.map(i => i.tipologia).filter(Boolean))].sort();
-        const selInc = document.getElementById('filter-incarico');
-        const selTip = document.getElementById('filter-tipologia');
-        
-        selInc.innerHTML = '<option value="">Seleziona...</option>';
-        selTip.innerHTML = '<option value="">Seleziona...</option>';
+function renderAccordion(costi){
+    const container = document.getElementById('accordion-container');
+    container.innerHTML = "";
 
-        incarichi.forEach(inc => {
-            const opt = document.createElement('option');
-            opt.value = inc; opt.textContent = inc;
-            selInc.appendChild(opt);
-        });
-        tipologie.forEach(tip => {
-            const opt = document.createElement('option');
-            opt.value = tip; opt.textContent = tip;
-            selTip.appendChild(opt);
-        });
-    }
+    const tree = {};
 
-    function applicaFiltri() {
-        const fInc = document.getElementById('filter-incarico').value;
-        const fTip = document.getElementById('filter-tipologia').value;
-        const fSta = document.getElementById('filter-stato').value;
-        const datiFiltrati = datiOriginali.filter(item => {
-            const matchInc = fInc === "" || item.incaricoa === fInc;
-            const matchTip = fTip === "" || item.tipologia === fTip;
-            const matchSta = fSta === "" || (item.completato || 'no') === fSta;
-            return matchInc && matchTip && matchSta;
-        });
-        renderAccordion(datiFiltrati);
-    }
+    costi.forEach(item=>{
+        const d = new Date(item.data_spesa);
+        const y = d.getFullYear();
+        const m = d.getMonth()+1;
 
-    function resetFiltri() {
-        document.getElementById('filter-incarico').value = "";
-        document.getElementById('filter-tipologia').value = "";
-        document.getElementById('filter-stato').value = "";
-        renderAccordion(datiOriginali);
-    }
+        if(!tree[y]) tree[y] = {};
+        if(!tree[y][m]) tree[y][m] = [];
+        tree[y][m].push(item);
+    });
 
-    async function toggleStato(id, currentVal, event) {
-        if(event) event.stopPropagation();
-        const nuovoStato = currentVal === 'si' ? 'no' : 'si';
-        const btn = event.currentTarget;
-        const icon = btn.querySelector('i');
-        const oldClass = icon.className;
-        icon.className = "fas fa-spinner loading-spin text-slate-400";
-        try {
-            const { error } = await supabaseClient.from('gestione_costi').update({ completato: nuovoStato }).eq('id', id);
-            if (error) throw error;
-            const idx = datiOriginali.findIndex(d => d.id == id);
-            if (idx !== -1) datiOriginali[idx].completato = nuovoStato;
-            applicaFiltri();
-        } catch (err) { 
-            alert("Errore"); 
-            icon.className = oldClass;
-        }
-    }
+    Object.keys(tree).sort((a,b)=>b-a).forEach(year=>{
+        let html = `<div>
+        <div onclick="toggle('y${year}')" class="apple-glass p-4 mb-2 cursor-pointer">
+        <b>${year}</b>
+        </div>
+        <div id="y${year}" class="collapsed-content">`;
 
-    function toggle(id) {
-        const el = document.getElementById(id);
-        if(!el) return;
-        el.classList.toggle('collapsed-content');
-        el.previousElementSibling.classList.toggle('is-open');
-    }
+        Object.keys(tree[year]).sort((a,b)=>b-a).forEach(month=>{
+            const spese = tree[year][month];
 
-    function vaiAModifica(id, event) {
-        if(event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        console.log("Navigazione verso modifica_spesa.html per ID:", id);
-        window.location.assign(`modifica_spesa.html?id=${id}`);
-    }
+            // ✅ ESCLUSIONE PRELIEVI
+            const speso = spese
+                .filter(i => i.importo < 0 && !isPrelievo(i))
+                .reduce((a,b)=>a+Math.abs(b.importo),0);
 
-    function renderAccordion(costi) {
-        const container = document.getElementById('accordion-container');
-        container.innerHTML = '';
-        if (costi.length === 0) {
-            container.innerHTML = '<div class="text-center p-20 text-slate-400 font-medium">Nessun costo trovato.</div>';
-            return;
-        }
+            html += `<div>
+            <div onclick="toggle('m${year}${month}')" class="apple-glass p-3 m-2 cursor-pointer">
+            ${nomiMesi[month-1]} - Totale: € ${speso.toFixed(2)}
+            </div>
 
-        const tree = {};
-        costi.forEach(item => {
-            const date = new Date(item.data_spesa);
-            const y = date.getFullYear();
-            const m = date.getMonth() + 1;
-            if (!tree[y]) tree[y] = {};
-            if (!tree[y][m]) tree[y][m] = [];
-            tree[y][m].push(item);
-        });
+            <div id="m${year}${month}" class="collapsed-content">
 
-        Object.keys(tree).sort((a,b)=>b-a).forEach(year => {
-            const yearId = `y-${year}`;
-            let html = `<div class="year-group">
-                <div onclick="toggle('${yearId}')" class="year-header apple-glass p-7 rounded-[2.5rem] flex items-center justify-between mb-3">
-                    <h2 class="text-3xl font-bold text-slate-800"><i class="fas fa-chevron-right mr-5 text-emerald-500 rotate-icon text-xl"></i> ${year}</h2>
-                </div>
-                <div id="${yearId}" class="collapsed-content space-y-5 pt-4 pb-8 pl-0 md:pl-8">`;
+            <table class="w-full bg-white">
+            <tr>
+            <th>Data</th><th>Descrizione</th><th>Importo</th><th>Azioni</th>
+            </tr>`;
 
-            Object.keys(tree[year]).sort((a,b)=>b-a).forEach(month => {
-                const monthId = `m-${year}-${month}`;
-                const spese = tree[year][month];
-                
-                const budgetRow = datiBudget.find(b => b.anno == year && b.mese == month);
-                const limit = budgetRow ? parseFloat(budgetRow.importo_budget) : 0;
-                
-                // LOGICA ESCLUSIONE PRELIEVI (Robusta)
-                const speso = spese
-                    .filter(i => {
-                        const d = (i.descrizione || "").toLowerCase();
-                        const t = (i.tipologia || "").toLowerCase();
-                        const isPrelievo = d.includes("prelievo") || t.includes("prelievo");
-                        return i.importo < 0 && !isPrelievo;
-                    })
-                    .reduce((acc, i) => acc + Math.abs(i.importo), 0);
-                
-                const rimanente = limit - speso;
-                const perc = limit > 0 ? (speso / limit) * 100 : 0;
-                let colorClass = perc >= 90 ? 'bg-red-500' : (perc >= 70 ? 'bg-amber-400' : 'bg-emerald-500');
+            spese.forEach(i=>{
+                const prelievo = isPrelievo(i);
 
-                html += `<div class="month-group">
-                    <div onclick="toggle('${monthId}')" class="month-header apple-glass p-6 rounded-[2rem] flex flex-col gap-5">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-xl font-semibold text-slate-700"><i class="fas fa-chevron-right mr-4 text-sm rotate-icon"></i> ${nomiMesi[month-1]}</h3>
-                            <div class="flex gap-8 text-right">
-                                <div><span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite</span>
-                                <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p></div>
-                                ${limit > 0 ? `<div><span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Rimanente</span>
-                                <p class="text-lg font-bold ${rimanente < 0 ? 'text-red-500' : 'text-emerald-600'}">€ ${rimanente.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p></div>` : ''}
-                            </div>
-                        </div>
-                        <div class="w-full h-2 progress-container rounded-full overflow-hidden">
-                            <div class="h-full ${colorClass} rounded-full transition-all duration-1000" style="width:${Math.min(perc, 100)}%"></div>
-                        </div>
-                    </div>
-                    <div id="${monthId}" class="collapsed-content mt-4">
-                        <div class="apple-glass rounded-[2rem] overflow-hidden overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-white/30 text-[10px] uppercase text-slate-400 font-bold">
-                                    <tr>
-                                        <th class="p-5">Data</th><th class="p-5">Incarico</th><th class="p-5">Tipologia</th><th class="p-5">Descrizione</th><th class="p-5 text-right">Importo</th><th class="p-5 text-center">Stato</th><th class="p-5 text-center">Azioni</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-black/5">
-                                    ${spese.map(i => {
-                                        const d = (i.descrizione || "").toLowerCase();
-                                        const t = (i.tipologia || "").toLowerCase();
-                                        const isPrelievo = d.includes("prelievo") || t.includes("prelievo");
-                                        const isDone = (i.completato || 'no') === 'si';
-                                        
-                                        return `<tr class="table-row ${isPrelievo ? 'bg-amber-50/40' : ''}">
-                                            <td class="p-5 text-sm text-slate-600">${new Date(i.data_spesa).toLocaleDateString()}</td>
-                                            <td class="p-5 text-sm font-bold text-slate-900">${i.incaricoa || '-'}</td>
-                                            <td class="p-5"><span class="px-3 py-1 bg-white/50 border rounded-full text-[10px] text-slate-500 font-bold uppercase">${i.tipologia}</span></td>
-                                            <td class="p-5 text-sm text-slate-600">
-                                                ${i.descrizione || '-'} 
-                                                ${isPrelievo ? '<br><span class="text-[8px] text-amber-600 font-black uppercase">[Escluso dal Totale]</span>' : ''}
-                                            </td>
-                                            <td class="p-5 text-right font-bold ${isPrelievo ? 'text-slate-400' : (i.importo < 0 ? 'text-negative' : 'text-positive')}">
-                                                € ${i.importo.toFixed(2)}
-                                            </td>
-                                            <td class="p-5 text-center">
-                                                ${!isPrelievo ? `<div onclick="toggleStato('${i.id}', '${i.completato || 'no'}', event)" class="status-btn">
-                                                    <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-400'} text-xl"></i>
-                                                </div>` : '-'}
-                                            </td>
-                                            <td class="p-5 text-center">
-                                                <button onclick="vaiAModifica('${i.id}', event)" class="hover:text-emerald-600 text-slate-300 transition-colors p-3">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                            </td>
-                                        </tr>`
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>`;
+                html += `<tr class="${prelievo ? 'bg-yellow-50' : ''}">
+                <td>${i.data_spesa}</td>
+                <td>
+                    ${i.descrizione || ''}
+                    ${prelievo ? '<br><small>ESCLUSO</small>' : ''}
+                </td>
+                <td class="${prelievo ? '' : (i.importo<0?'text-negative':'text-positive')}">
+                    € ${i.importo}
+                </td>
+                <td>
+                    <button onclick="vaiAModifica('${i.id}', event)">
+                        ✏️
+                    </button>
+                </td>
+                </tr>`;
             });
-            html += `</div></div>`;
-            container.innerHTML += html;
+
+            html += "</table></div></div>";
         });
-    }
 
-    function exportToExcel() {
-        const rows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo, Stato: i.completato }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Spese");
-        XLSX.writeFile(wb, "Report_Spese.xlsx");
-    }
+        html += "</div></div>";
+        container.innerHTML += html;
+    });
+}
 
-    window.onload = init;
+init();
 </script>
+
 </body>
 </html>
