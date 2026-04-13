@@ -8,7 +8,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
 body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg,#f5f7fa,#c3cfe2); }
@@ -19,6 +18,16 @@ body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg,#f5f
 .collapsed-content { display:none; }
 .rotate-icon { transition:0.3s; }
 .is-open .rotate-icon { transform:rotate(90deg); }
+.btn-edit {
+    background:#10b981;
+    color:white;
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:12px;
+    font-weight:bold;
+    cursor:pointer;
+}
+.btn-edit:hover { background:#059669; }
 </style>
 </head>
 
@@ -54,11 +63,13 @@ function toggle(id){
 
 function vaiAModifica(id, event){
     if(event){
-        event.preventDefault();
         event.stopPropagation();
+        event.preventDefault();
     }
-    // FIX NAVIGAZIONE
-    window.location.href = "modifica_spesa.html?id=" + id;
+    console.log("Apro modifica:", id);
+
+    // FIX DEFINITIVO
+    window.open("modifica_spesa.html?id=" + id, "_self");
 }
 
 function renderAccordion(costi){
@@ -87,7 +98,6 @@ function renderAccordion(costi){
         Object.keys(tree[year]).sort((a,b)=>b-a).forEach(month=>{
             const spese = tree[year][month];
 
-            // ✅ ESCLUSIONE PRELIEVI
             const speso = spese
                 .filter(i => i.importo < 0 && !isPrelievo(i))
                 .reduce((a,b)=>a+Math.abs(b.importo),0);
@@ -111,14 +121,14 @@ function renderAccordion(costi){
                 <td>${i.data_spesa}</td>
                 <td>
                     ${i.descrizione || ''}
-                    ${prelievo ? '<br><small>ESCLUSO</small>' : ''}
+                    ${prelievo ? '<br><small>ESCLUSO DAL TOTALE</small>' : ''}
                 </td>
                 <td class="${prelievo ? '' : (i.importo<0?'text-negative':'text-positive')}">
                     € ${i.importo}
                 </td>
                 <td>
-                    <button onclick="vaiAModifica('${i.id}', event)">
-                        ✏️
+                    <button class="btn-edit" onclick="vaiAModifica('${i.id}', event)">
+                        Modifica
                     </button>
                 </td>
                 </tr>`;
