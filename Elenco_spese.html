@@ -180,7 +180,7 @@
             const idx = datiOriginali.findIndex(d => d.id == id);
             if (idx !== -1) datiOriginali[idx].completato = nuovoStato;
             applicaFiltri();
-        } catch (err) { alert("Errore"); }
+        } catch (err) { alert("Errore durante l'aggiornamento dello stato"); }
     }
 
     function toggle(id) {
@@ -188,6 +188,12 @@
         if(!el) return;
         el.classList.toggle('collapsed-content');
         el.previousElementSibling.classList.toggle('is-open');
+    }
+
+    // Funzione per gestire il tasto modifica
+    function vaiAModifica(id, event) {
+        if(event) event.stopPropagation();
+        window.location.href = `modifica_spesa.html?id=${id}`;
     }
 
     function renderAccordion(costi) {
@@ -223,10 +229,12 @@
                 const budgetRow = datiBudget.find(b => b.anno == year && b.mese == month);
                 const limit = budgetRow ? parseFloat(budgetRow.importo_budget) : 0;
                 
+                // CALCOLO SPESO ESCLUDENDO I PRELIEVI
                 const speso = spese
                     .filter(i => {
                         const desc = (i.descrizione || "").toLowerCase().trim();
                         const tipo = (i.tipologia || "").toLowerCase().trim();
+                        // Escludi se descrizione o tipologia contengono "prelievo bancario"
                         return i.importo < 0 && 
                                desc !== "prelievo bancario" && 
                                tipo !== "prelievo bancario";
@@ -300,9 +308,13 @@
                                                 <div onclick="toggleStato('${i.id}', '${i.completato || 'no'}', event)" class="status-btn inline-block">
                                                     <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-400'} text-xl"></i>
                                                 </div>
-                                                ` : ''}
+                                                ` : '<i class="fas fa-minus text-slate-300"></i>'}
                                             </td>
-                                            <td class="p-5 text-center"><a href="modifica_spesa.html?id=${i.id}" class="text-slate-300 hover:text-emerald-500 transition-colors"><i class="fas fa-edit text-sm"></i></a></td>
+                                            <td class="p-5 text-center">
+                                                <button onclick="vaiAModifica('${i.id}', event)" class="text-slate-400 hover:text-emerald-500 transition-colors p-2">
+                                                    <i class="fas fa-edit text-sm"></i>
+                                                </button>
+                                            </td>
                                         </tr>`
                                     }).join('')}
                                 </tbody>
@@ -317,7 +329,14 @@
     }
 
     function exportToExcel() {
-        const rows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo, Stato: i.completato }));
+        const rows = datiOriginali.map(i => ({ 
+            Data: i.data_spesa, 
+            Incarico: i.incaricoa, 
+            Tipo: i.tipologia, 
+            Desc: i.descrizione, 
+            Importo: i.importo, 
+            Stato: i.completato 
+        }));
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Spese");
