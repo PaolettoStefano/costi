@@ -240,7 +240,7 @@
                 const budgetRow = datiBudget.find(b => b.anno == year && b.mese == month);
                 const limit = budgetRow ? parseFloat(budgetRow.importo_budget) : 0;
                 
-                // LOGICA ESCLUSIONE PRELIEVI (Robusta)
+                // LOGICA ESCLUSIONE PRELIEVI
                 const speso = spese
                     .filter(i => {
                         const d = (i.descrizione || "").toLowerCase();
@@ -259,6 +259,8 @@
                         <div class="flex items-center justify-between">
                             <h3 class="text-xl font-semibold text-slate-700"><i class="fas fa-chevron-right mr-4 text-sm rotate-icon"></i> ${nomiMesi[month-1]}</h3>
                             <div class="flex gap-8 text-right">
+                                ${limit > 0 ? `<div><span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Budget</span>
+                                <p class="text-lg font-bold text-slate-500">€ ${limit.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p></div>` : ''}
                                 <div><span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite</span>
                                 <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p></div>
                                 ${limit > 0 ? `<div><span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Rimanente</span>
