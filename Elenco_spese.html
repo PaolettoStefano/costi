@@ -136,6 +136,10 @@
         const tipologie = [...new Set(data.map(i => i.tipologia).filter(Boolean))].sort();
         const selInc = document.getElementById('filter-incarico');
         const selTip = document.getElementById('filter-tipologia');
+        
+        selInc.innerHTML = '<option value="">Seleziona...</option>';
+        selTip.innerHTML = '<option value="">Seleziona...</option>';
+
         incarichi.forEach(inc => {
             const opt = document.createElement('option');
             opt.value = inc; opt.textContent = inc;
@@ -173,6 +177,7 @@
         const nuovoStato = currentVal === 'si' ? 'no' : 'si';
         const btn = event.currentTarget;
         const icon = btn.querySelector('i');
+        const oldClass = icon.className;
         icon.className = "fas fa-spinner loading-spin text-slate-400";
         try {
             const { error } = await supabaseClient.from('gestione_costi').update({ completato: nuovoStato }).eq('id', id);
@@ -180,7 +185,10 @@
             const idx = datiOriginali.findIndex(d => d.id == id);
             if (idx !== -1) datiOriginali[idx].completato = nuovoStato;
             applicaFiltri();
-        } catch (err) { alert("Errore durante l'aggiornamento dello stato"); }
+        } catch (err) { 
+            alert("Errore"); 
+            icon.className = oldClass;
+        }
     }
 
     function toggle(id) {
@@ -190,17 +198,20 @@
         el.previousElementSibling.classList.toggle('is-open');
     }
 
-    // Funzione per gestire il tasto modifica
     function vaiAModifica(id, event) {
-        if(event) event.stopPropagation();
-        window.location.href = `modifica_spesa.html?id=${id}`;
+        if(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        console.log("Navigazione verso modifica_spesa.html per ID:", id);
+        window.location.assign(`modifica_spesa.html?id=${id}`);
     }
 
     function renderAccordion(costi) {
         const container = document.getElementById('accordion-container');
         container.innerHTML = '';
         if (costi.length === 0) {
-            container.innerHTML = '<div class="text-center p-20 text-slate-400 font-medium">Nessun costo trovato con i filtri selezionati.</div>';
+            container.innerHTML = '<div class="text-center p-20 text-slate-400 font-medium">Nessun costo trovato.</div>';
             return;
         }
 
@@ -229,90 +240,69 @@
                 const budgetRow = datiBudget.find(b => b.anno == year && b.mese == month);
                 const limit = budgetRow ? parseFloat(budgetRow.importo_budget) : 0;
                 
-                // CALCOLO SPESO ESCLUDENDO I PRELIEVI
+                // LOGICA ESCLUSIONE PRELIEVI (Robusta)
                 const speso = spese
                     .filter(i => {
-                        const desc = (i.descrizione || "").toLowerCase().trim();
-                        const tipo = (i.tipologia || "").toLowerCase().trim();
-                        // Escludi se descrizione o tipologia contengono "prelievo bancario"
-                        return i.importo < 0 && 
-                               desc !== "prelievo bancario" && 
-                               tipo !== "prelievo bancario";
+                        const d = (i.descrizione || "").toLowerCase();
+                        const t = (i.tipologia || "").toLowerCase();
+                        const isPrelievo = d.includes("prelievo") || t.includes("prelievo");
+                        return i.importo < 0 && !isPrelievo;
                     })
                     .reduce((acc, i) => acc + Math.abs(i.importo), 0);
                 
                 const rimanente = limit - speso;
                 const perc = limit > 0 ? (speso / limit) * 100 : 0;
-
-                let colorClass = 'bg-emerald-500';
-                if (perc >= 90) {
-                    colorClass = 'bg-red-500';
-                } else if (perc >= 70) {
-                    colorClass = 'bg-amber-400';
-                }
+                let colorClass = perc >= 90 ? 'bg-red-500' : (perc >= 70 ? 'bg-amber-400' : 'bg-emerald-500');
 
                 html += `<div class="month-group">
                     <div onclick="toggle('${monthId}')" class="month-header apple-glass p-6 rounded-[2rem] flex flex-col gap-5">
                         <div class="flex items-center justify-between">
                             <h3 class="text-xl font-semibold text-slate-700"><i class="fas fa-chevron-right mr-4 text-sm rotate-icon"></i> ${nomiMesi[month-1]}</h3>
                             <div class="flex gap-8 text-right">
-                                <div>
-                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite</span>
-                                    <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
-                                </div>
-                                ${limit > 0 ? `
-                                <div>
-                                    <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Rimanente</span>
-                                    <p class="text-lg font-bold ${rimanente < 0 ? 'text-red-500' : 'text-emerald-600'}">€ ${rimanente.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p>
-                                </div>` : ''}
+                                <div><span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Uscite</span>
+                                <p class="text-lg font-bold text-slate-800">€ ${speso.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p></div>
+                                ${limit > 0 ? `<div><span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Rimanente</span>
+                                <p class="text-lg font-bold ${rimanente < 0 ? 'text-red-500' : 'text-emerald-600'}">€ ${rimanente.toLocaleString('it-IT', {minimumFractionDigits: 2})}</p></div>` : ''}
                             </div>
                         </div>
                         <div class="w-full h-2 progress-container rounded-full overflow-hidden">
                             <div class="h-full ${colorClass} rounded-full transition-all duration-1000" style="width:${Math.min(perc, 100)}%"></div>
                         </div>
                     </div>
-                    <div id="${monthId}" class="collapsed-content mt-4 overflow-hidden">
-                        <div class="apple-glass rounded-[2rem] overflow-x-auto">
+                    <div id="${monthId}" class="collapsed-content mt-4">
+                        <div class="apple-glass rounded-[2rem] overflow-hidden overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead class="bg-white/30 text-[10px] uppercase text-slate-400 font-bold">
                                     <tr>
-                                        <th class="p-5">Data</th>
-                                        <th class="p-5">Incarico</th>
-                                        <th class="p-5">Tipologia</th>
-                                        <th class="p-5">Descrizione</th>
-                                        <th class="p-5 text-right">Importo</th>
-                                        <th class="p-5 text-center">Stato</th>
-                                        <th class="p-5 text-center">Azioni</th>
+                                        <th class="p-5">Data</th><th class="p-5">Incarico</th><th class="p-5">Tipologia</th><th class="p-5">Descrizione</th><th class="p-5 text-right">Importo</th><th class="p-5 text-center">Stato</th><th class="p-5 text-center">Azioni</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-black/5">
                                     ${spese.map(i => {
+                                        const d = (i.descrizione || "").toLowerCase();
+                                        const t = (i.tipologia || "").toLowerCase();
+                                        const isPrelievo = d.includes("prelievo") || t.includes("prelievo");
                                         const isDone = (i.completato || 'no') === 'si';
-                                        const descRaw = (i.descrizione || "").toLowerCase().trim();
-                                        const tipoRaw = (i.tipologia || "").toLowerCase().trim();
-                                        const isPrelievo = descRaw === "prelievo bancario" || tipoRaw === "prelievo bancario";
                                         
-                                        return `<tr class="table-row transition-colors ${isPrelievo ? 'bg-amber-50/50 border-l-4 border-amber-400' : ''}">
-                                            <td class="p-5 text-sm text-slate-600 font-medium">${new Date(i.data_spesa).toLocaleDateString()}</td>
-                                            <td class="p-5 text-sm text-slate-900 font-bold">${i.incaricoa || '-'}</td>
-                                            <td class="p-5"><span class="px-3 py-1 bg-white/50 border border-black/5 rounded-full text-[10px] text-slate-500 font-bold uppercase">${i.tipologia}</span></td>
-                                            <td class="p-5 text-sm text-slate-600 truncate max-w-[150px]">
+                                        return `<tr class="table-row ${isPrelievo ? 'bg-amber-50/40' : ''}">
+                                            <td class="p-5 text-sm text-slate-600">${new Date(i.data_spesa).toLocaleDateString()}</td>
+                                            <td class="p-5 text-sm font-bold text-slate-900">${i.incaricoa || '-'}</td>
+                                            <td class="p-5"><span class="px-3 py-1 bg-white/50 border rounded-full text-[10px] text-slate-500 font-bold uppercase">${i.tipologia}</span></td>
+                                            <td class="p-5 text-sm text-slate-600">
                                                 ${i.descrizione || '-'} 
-                                                ${isPrelievo ? '<span class="ml-2 text-[8px] bg-amber-200 text-amber-700 px-2 py-0.5 rounded-md font-extrabold uppercase">Escluso dal calcolo</span>' : ''}
+                                                ${isPrelievo ? '<br><span class="text-[8px] text-amber-600 font-black uppercase">[Escluso dal Totale]</span>' : ''}
                                             </td>
-                                            <td class="p-5 text-right font-bold text-base ${isPrelievo ? 'text-slate-600' : (i.importo < 0 ? 'text-negative' : 'text-positive')}">
+                                            <td class="p-5 text-right font-bold ${isPrelievo ? 'text-slate-400' : (i.importo < 0 ? 'text-negative' : 'text-positive')}">
                                                 € ${i.importo.toFixed(2)}
                                             </td>
                                             <td class="p-5 text-center">
-                                                ${!isPrelievo ? `
-                                                <div onclick="toggleStato('${i.id}', '${i.completato || 'no'}', event)" class="status-btn inline-block">
+                                                ${!isPrelievo ? `<div onclick="toggleStato('${i.id}', '${i.completato || 'no'}', event)" class="status-btn">
                                                     <i class="fas ${isDone ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-red-400'} text-xl"></i>
-                                                </div>
-                                                ` : '<i class="fas fa-minus text-slate-300"></i>'}
+                                                </div>` : '-'}
                                             </td>
                                             <td class="p-5 text-center">
-                                                <button onclick="vaiAModifica('${i.id}', event)" class="text-slate-400 hover:text-emerald-500 transition-colors p-2">
-                                                    <i class="fas fa-edit text-sm"></i>
+                                                <button onclick="vaiAModifica('${i.id}', event)" class="hover:text-emerald-600 text-slate-300 transition-colors p-3">
+                                                    <i class="fas fa-edit"></i>
                                                 </button>
                                             </td>
                                         </tr>`
@@ -329,14 +319,7 @@
     }
 
     function exportToExcel() {
-        const rows = datiOriginali.map(i => ({ 
-            Data: i.data_spesa, 
-            Incarico: i.incaricoa, 
-            Tipo: i.tipologia, 
-            Desc: i.descrizione, 
-            Importo: i.importo, 
-            Stato: i.completato 
-        }));
+        const rows = datiOriginali.map(i => ({ Data: i.data_spesa, Incarico: i.incaricoa, Tipo: i.tipologia, Desc: i.descrizione, Importo: i.importo, Stato: i.completato }));
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Spese");
